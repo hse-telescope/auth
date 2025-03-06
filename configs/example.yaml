@@ -1,0 +1,18 @@
+port: 8080
+
+db:
+  schema: "postgres"
+  user: "user"
+  password: "password"
+  ip: "db"
+  port: 5432
+  database: "example"
+  ssl: "disable"
+  migrations_path: file://migrations
+
+clients:
+  example:
+    url: http://localhost:8080
+
+logger:
+  mode: debug
