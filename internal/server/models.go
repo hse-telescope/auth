@@ -4,10 +4,10 @@ import (
 	"github.com/hse-telescope/auth/internal/providers/users"
 )
 
-type Person struct {
+type User struct {
 	ID       int    `json:"id"`
-	Username string `username:"username"`
-	Password string `password:"password"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func ServerUser2ProviderUser(user User) users.User {

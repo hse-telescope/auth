@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/hse-telescope/auth/internal/repository/models"
+	storage "github.com/hse-telescope/auth/internal/repository/storage/queries"
 	"github.com/hse-telescope/utils/db/psql"
 	"github.com/jmoiron/sqlx"
 )
@@ -33,7 +34,7 @@ func New(dbURL string, migrationsPath string) (Storage, error) {
 // GetAllUsers
 
 func (s Storage) GetUsers(ctx context.Context) ([]models.User, error) {
-	q := `SELECT * FROM people`
+	q := storage.GetUsersQuery
 
 	rows, err := s.db.QueryContext(ctx, q)
 	if err != nil {
@@ -51,7 +52,28 @@ func (s Storage) GetUsers(ctx context.Context) ([]models.User, error) {
 
 // RegisterUser
 
+func (s Storage) AddUser(ctx context.Context, username, hashedPassword string) (int64, error) {
+	q := storage.AddUserQuery
+	var userID int64
+	err := s.db.QueryRowContext(ctx, q, username, hashedPassword).Scan(&userID)
+	if err != nil {
+		return -1, err
+	}
+	return userID, nil
+}
+
 // LoginUser
+
+func (s Storage) CheckUser(ctx context.Context, username string) (int64, string, error) {
+	q := storage.FindUserQuery
+	var userID int64
+	var hashedPassword string
+	err := s.db.QueryRowContext(ctx, q, username).Scan(&userID, &hashedPassword)
+	if err != nil {
+		return -1, "", err
+	}
+	return userID, hashedPassword, nil
+}
 
 // DeleteUser
 

@@ -1,0 +1,10 @@
+// Get all users
+curl -v GET localhost:8080/users
+
+
+// Register user
+curl -v -X POST localhost:8080/register -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
+
+
+// Login user
+curl -v -X POST localhost:8080/login -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"

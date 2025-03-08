@@ -11,6 +11,8 @@ import (
 
 type Provider interface {
 	GetUsers(ctx context.Context) ([]users.User, error)
+	AddUser(ctx context.Context, username, password string) (int64, error)
+	LoginUser(ctx context.Context, username, password string) (int64, error)
 }
 
 type Server struct {
@@ -30,6 +32,8 @@ func (s *Server) setRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ping", s.pingHandler)
 	mux.HandleFunc("GET /users", s.getUsersHandler)
+	mux.HandleFunc("POST /register", s.registerUserHandler)
+	mux.HandleFunc("POST /login", s.loginUserHandler)
 	return mux
 }
 

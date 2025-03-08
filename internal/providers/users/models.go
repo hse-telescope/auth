@@ -1,6 +1,6 @@
 package users
 
-import "github.com/hse-telesope/auth/internal/repository/models"
+import "github.com/hse-telescope/auth/internal/repository/models"
 
 type User struct {
 	ID       int

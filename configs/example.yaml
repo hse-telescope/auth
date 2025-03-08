@@ -6,7 +6,7 @@ db:
   password: "password"
   ip: "db"
   port: 5432
-  database: "example"
+  database: "auth"
   ssl: "disable"
   migrations_path: file://migrations
 

@@ -13,7 +13,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - backend2db
+      - auth2db
 
   db:
     image: postgres:15.1
@@ -21,7 +21,7 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: example
+      POSTGRES_DB: auth
       PGDATA: "/var/lib/postgresql/data/pgdata"
     restart: unless-stopped
     deploy:
@@ -30,14 +30,14 @@ services:
           cpus: '0.5'
           memory: 128M
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user -d people" ]
+      test: [ "CMD-SHELL", "pg_isready -U user -d users" ]
       interval: 5s
       timeout: 5s
       retries: 100
       start_period: 10s
     networks:
-      - backend2db
+      - auth2db
 
 networks:
-  backend2db:
+  auth2db:
     driver: bridge
