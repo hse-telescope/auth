@@ -1,0 +1,146 @@
+openapi: 3.0.0
+info:
+  title: Auth Microservice API
+  description: API for managing user authentication and registration
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /ping:
+    get:
+      summary: Check server availability
+      description: Returns a simple response to confirm that the server is running.
+      responses:
+        '200':
+          description: Server is available
+          content:
+            text/plain:
+              example: pong
+  /users:
+    get:
+      summary: Get a list of all users
+      description: Retrieves a list of all registered users.
+      responses:
+        '200':
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              example: Something went wrong
+  /register:
+    post:
+      summary: Register a new user
+      description: Registers a new user with the provided username and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialsRequest'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User registered!
+                  id:
+                    type: integer
+                    example: 1
+        '400':
+          description: Invalid request
+          content:
+            text/plain:
+              example: Invalid request
+        '409':
+          description: User already exists
+          content:
+            text/plain:
+              example: User already registered
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              example: Could not register user
+  /login:
+    post:
+      summary: Authenticate a user
+      description: Authenticates a user with the provided username and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialsRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Login successful!
+                  id:
+                    type: integer
+                    example: 1
+        '400':
+          description: Invalid request
+          content:
+            text/plain:
+              example: Invalid request
+        '401':
+          description: Incorrect password
+          content:
+            text/plain:
+              example: Incorrect password
+        '404':
+          description: User not found
+          content:
+            text/plain:
+              example: User not found
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              example: Could not login user
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: john_doe
+        password:
+          type: string
+          example: hashed_password
+    CredentialsRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: john_doe
+        password:
+          type: string
+          example: mypassword123
+      required:
+        - username
+        - password

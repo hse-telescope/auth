@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/hse-telescope/auth/internal/repository/models"
 	storage "github.com/hse-telescope/auth/internal/repository/storage/queries"
@@ -56,7 +57,9 @@ func (s Storage) AddUser(ctx context.Context, username, hashedPassword string) (
 	q := storage.AddUserQuery
 	var userID int64
 	err := s.db.QueryRowContext(ctx, q, username, hashedPassword).Scan(&userID)
+
 	if err != nil {
+		fmt.Println(err.Error())
 		return -1, err
 	}
 	return userID, nil
@@ -70,6 +73,7 @@ func (s Storage) CheckUser(ctx context.Context, username string) (int64, string,
 	var hashedPassword string
 	err := s.db.QueryRowContext(ctx, q, username).Scan(&userID, &hashedPassword)
 	if err != nil {
+		fmt.Println(err.Error())
 		return -1, "", err
 	}
 	return userID, hashedPassword, nil

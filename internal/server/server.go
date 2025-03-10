@@ -7,6 +7,7 @@ import (
 
 	"github.com/hse-telescope/auth/internal/config"
 	"github.com/hse-telescope/auth/internal/providers/users"
+	"github.com/rs/cors"
 )
 
 type Provider interface {
@@ -23,8 +24,17 @@ type Server struct {
 func New(conf config.Config, provider Provider) *Server {
 	s := new(Server)
 	s.server.Addr = fmt.Sprintf(":%d", conf.Port)
-	s.server.Handler = s.setRouter()
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type"},
+		AllowCredentials: true,
+	})
+
+	s.server.Handler = c.Handler(s.setRouter())
 	s.provider = provider
+
 	return s
 }
 
