@@ -8,3 +8,7 @@ curl -v -X POST localhost:8080/register -H "Content-Type: application/json" -d "
 
 // Login user
 curl -v -X POST localhost:8080/login -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
+
+// Get users (token check)
+
+curl -X GET http://localhost:8080/users -H "Authorization: Bearer "<my_token>"
