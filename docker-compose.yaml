@@ -30,7 +30,7 @@ services:
           cpus: '0.5'
           memory: 128M
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user -d users" ]
+      test: [ "CMD-SHELL", "pg_isready -U user -d auth" ]
       interval: 5s
       timeout: 5s
       retries: 100
