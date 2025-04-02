@@ -31,7 +31,7 @@ func New(conf config.Config, provider Provider) *Server {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
 
@@ -43,6 +43,12 @@ func New(conf config.Config, provider Provider) *Server {
 
 func (s *Server) setRouter() *http.ServeMux {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("OPTIONS /{path...}", func(w http.ResponseWriter, r *http.Request) {
+		setCommonHeaders(w)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	mux.HandleFunc("GET /ping", s.pingHandler)
 	mux.HandleFunc("GET /users", s.authMiddleware(s.getUsersHandler))
 	mux.HandleFunc("POST /register", s.registerUserHandler)
