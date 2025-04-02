@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/hse-telescope/auth/internal/repository/models"
 	storage "github.com/hse-telescope/auth/internal/repository/storage/queries"
@@ -30,10 +31,6 @@ func New(dbURL string, migrationsPath string) (Storage, error) {
 	}, nil
 }
 
-//TO DO
-
-// GetAllUsers
-
 func (s Storage) GetUsers(ctx context.Context) ([]models.User, error) {
 	q := storage.GetUsersQuery
 
@@ -51,8 +48,6 @@ func (s Storage) GetUsers(ctx context.Context) ([]models.User, error) {
 	return users, nil
 }
 
-// RegisterUser
-
 func (s Storage) AddUser(ctx context.Context, username, hashedPassword string) (int64, error) {
 	q := storage.AddUserQuery
 	var userID int64
@@ -64,8 +59,6 @@ func (s Storage) AddUser(ctx context.Context, username, hashedPassword string) (
 	}
 	return userID, nil
 }
-
-// LoginUser
 
 func (s Storage) CheckUser(ctx context.Context, username string) (int64, string, error) {
 	q := storage.FindUserQuery
@@ -79,8 +72,27 @@ func (s Storage) CheckUser(ctx context.Context, username string) (int64, string,
 	return userID, hashedPassword, nil
 }
 
-// DeleteUser
+func (s Storage) CreateRefreshToken(ctx context.Context, userdID int64, refreshToken string, expiresAt time.Time) error {
+	q := storage.SaveRefreshTokenQuery
+	_, err := s.db.ExecContext(ctx, q, userdID, refreshToken, expiresAt)
+	return err
+}
 
-// ChangePassword
+func (s Storage) DeleteRefreshToken(ctx context.Context, refreshToken string) error {
+	q := storage.DeleteRefreshTokenQuery
+	_, err := s.db.ExecContext(ctx, q, refreshToken)
+	return err
+}
 
-// ChangeUsername
+func (s Storage) GetRefreshToken(ctx context.Context, refreshToken string) (models.RefreshToken, error) {
+	q := storage.GetRefreshTokenQuery
+	var rt models.RefreshToken
+	err := s.db.QueryRowContext(ctx, q, refreshToken).Scan(&rt.ID, &rt.UserID, &rt.Token, &rt.ExpiresAt, &rt.CreatedAt)
+	return rt, err
+}
+
+func (s Storage) DeleteExpiredRefreshTokens(ctx context.Context) error {
+	q := storage.DeleteExpiredRefreshTokensQuery
+	_, err := s.db.ExecContext(ctx, q)
+	return err
+}

@@ -12,8 +12,11 @@ import (
 
 type Provider interface {
 	GetUsers(ctx context.Context) ([]users.User, error)
-	AddUser(ctx context.Context, username, password string) (int64, error)
-	LoginUser(ctx context.Context, username, password string) (int64, error)
+	RegisterUser(ctx context.Context, username, password string) (users.TokenPair, error)
+	LoginUser(ctx context.Context, username, password string) (users.TokenPair, error)
+	RefreshTokens(ctx context.Context, refreshToken string) (users.TokenPair, error)
+	GenerateTokens(ctx context.Context, userID int64) (users.TokenPair, error)
+	Logout(ctx context.Context, refreshToken string) error
 }
 
 type Server struct {
@@ -28,7 +31,7 @@ func New(conf config.Config, provider Provider) *Server {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
 
@@ -40,10 +43,18 @@ func New(conf config.Config, provider Provider) *Server {
 
 func (s *Server) setRouter() *http.ServeMux {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("OPTIONS /{path...}", func(w http.ResponseWriter, r *http.Request) {
+		setCommonHeaders(w)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	mux.HandleFunc("GET /ping", s.pingHandler)
-	mux.HandleFunc("GET /users", s.getUsersHandler)
+	mux.HandleFunc("GET /users", s.authMiddleware(s.getUsersHandler))
 	mux.HandleFunc("POST /register", s.registerUserHandler)
 	mux.HandleFunc("POST /login", s.loginUserHandler)
+	mux.HandleFunc("POST /refresh", s.refreshHandler)
+	mux.HandleFunc("POST /logout", s.logoutHandler)
 	return mux
 }
 
