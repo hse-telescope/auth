@@ -6,7 +6,7 @@ RUN go build -ldflags "-s -w" -o ./bin/auth ./cmd/app
 
 FROM alpine:latest AS runner
 WORKDIR /app
-COPY --from=builder /app/bin/auth ./template
+COPY --from=builder /app/bin/auth ./auth
 COPY migrations migrations
 
-CMD ["./auth", "./configs/example.yaml"]
+ENTRYPOINT ["./auth"]
