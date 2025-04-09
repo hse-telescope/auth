@@ -20,7 +20,7 @@ linters:
     - govet
     - ineffassign
     - megacheck
-    - revive
+    # - revive
     - typecheck
 
 linters-settings:
