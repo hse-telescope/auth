@@ -20,7 +20,7 @@ linters:
     - govet
     - ineffassign
     - megacheck
-    # - revive
+    - revive
     - typecheck
 
 linters-settings:
@@ -36,6 +36,9 @@ linters-settings:
           - disableStutteringCheck
 
 issues:
+  exclude:
+    - EXC0012
+    - EXC0014
   exclude-use-default: false
   exclude-dirs:
     - bin
