@@ -2,7 +2,6 @@ package facade
 
 import (
 	"context"
-	"time"
 
 	"github.com/hse-telescope/auth/internal/repository/models"
 )
@@ -11,10 +10,12 @@ type Storage interface {
 	GetUsers(ctx context.Context) ([]models.User, error)
 	AddUser(ctx context.Context, username, password string) (int64, error)
 	CheckUser(ctx context.Context, username string) (int64, string, error)
-	GetRefreshToken(ctx context.Context, refreshToken string) (models.RefreshToken, error)
-	DeleteRefreshToken(ctx context.Context, refreshToken string) error
-	DeleteExpiredRefreshTokens(ctx context.Context) error
-	CreateRefreshToken(ctx context.Context, userID int64, refreshToken string, expiresAt time.Time) error
+	CreateProjectPermission(ctx context.Context, perm models.ProjectPermission) error
+	GetUserProjectRole(ctx context.Context, userID, projectID int64) (string, error)
+	UserExists(ctx context.Context, userID int64) (bool, error)
+	ProjectExists(ctx context.Context, projectID int64) (bool, error)
+	DeletePermission(ctx context.Context, userID, projectID int64) error
+	UpdateRole(ctx context.Context, userID, projectID int64, role string) error
 }
 
 type Facade struct {
@@ -39,18 +40,26 @@ func (f Facade) CheckUser(ctx context.Context, username string) (int64, string, 
 	return f.storage.CheckUser(ctx, username)
 }
 
-func (f Facade) GetRefreshToken(ctx context.Context, refreshToken string) (models.RefreshToken, error) {
-	return f.storage.GetRefreshToken(ctx, refreshToken)
+func (f Facade) CreateProjectPermission(ctx context.Context, perm models.ProjectPermission) error {
+	return f.storage.CreateProjectPermission(ctx, perm)
 }
 
-func (f Facade) DeleteRefreshToken(ctx context.Context, refreshToken string) error {
-	return f.storage.DeleteRefreshToken(ctx, refreshToken)
+func (f Facade) GetUserProjectRole(ctx context.Context, userID, projectID int64) (string, error) {
+	return f.storage.GetUserProjectRole(ctx, userID, projectID)
 }
 
-func (f Facade) DeleteExpiredRefreshTokens(ctx context.Context) error {
-	return f.storage.DeleteExpiredRefreshTokens(ctx)
+func (f Facade) UserExists(ctx context.Context, userID int64) (bool, error) {
+	return f.storage.UserExists(ctx, userID)
 }
 
-func (f Facade) CreateRefreshToken(ctx context.Context, userID int64, refreshToken string, expiresAt time.Time) error {
-	return f.storage.CreateRefreshToken(ctx, userID, refreshToken, expiresAt)
+func (f Facade) ProjectExists(ctx context.Context, projectID int64) (bool, error) {
+	return f.storage.ProjectExists(ctx, projectID)
+}
+
+func (f Facade) DeletePermission(ctx context.Context, userID, projectID int64) error {
+	return f.storage.DeletePermission(ctx, userID, projectID)
+}
+
+func (f Facade) UpdateRole(ctx context.Context, userID, projectID int64, role string) error {
+	return f.storage.UpdateRole(ctx, userID, projectID, role)
 }

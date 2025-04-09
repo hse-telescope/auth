@@ -17,6 +17,12 @@ type Provider interface {
 	RefreshTokens(ctx context.Context, refreshToken string) (users.TokenPair, error)
 	GenerateTokens(ctx context.Context, userID int64) (users.TokenPair, error)
 	Logout(ctx context.Context, refreshToken string) error
+
+	CreateProject(ctx context.Context, userID, projectID int64) error
+	GetRole(ctx context.Context, userID, projectID int64) (string, error)
+	AssignRole(ctx context.Context, userID, projectID int64, role string) error
+	UpdateRole(ctx context.Context, userID, projectID int64, role string) error
+	DeleteRole(ctx context.Context, userID, projectID int64) error
 }
 
 type Server struct {
@@ -55,6 +61,14 @@ func (s *Server) setRouter() *http.ServeMux {
 	mux.HandleFunc("POST /login", s.loginUserHandler)
 	mux.HandleFunc("POST /refresh", s.refreshHandler)
 	mux.HandleFunc("POST /logout", s.logoutHandler)
+
+	mux.HandleFunc("POST /createProject", s.createProjectHandler)
+
+	mux.HandleFunc("GET /userProjectRole", s.getUserProjectRoleHandler)
+	mux.HandleFunc("POST /assignRole", s.assignRoleHandler)
+	mux.HandleFunc("PUT /updateRole", s.updateRoleHandler)
+	mux.HandleFunc("DELETE /deleteRole", s.deleteRoleHandler)
+
 	return mux
 }
 

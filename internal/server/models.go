@@ -10,6 +10,26 @@ type User struct {
 	Password string `json:"password"`
 }
 
+type RoleAssignmentRequest struct {
+	UserID    int64  `json:"user_id"`
+	ProjectID int64  `json:"project_id"`
+	Role      string `json:"role"`
+}
+
+type ProjectRoleRequest struct {
+	UserID    int64 `json:"user_id"`
+	ProjectID int64 `json:"project_id"`
+}
+
+type CredentialsRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type TokenRequest struct {
+	RefreshToken string `json:"token"`
+}
+
 func ServerUser2ProviderUser(user User) users.User {
 	return users.User{
 		ID:       user.ID,
