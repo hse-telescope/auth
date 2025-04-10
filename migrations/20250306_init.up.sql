@@ -4,13 +4,11 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS refresh_tokens (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS project_permissions (
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token TEXT NOT NULL UNIQUE,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id)
+    project_id INT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('owner', 'editor', 'viewer')),
+    PRIMARY KEY (user_id, project_id)
 );
 
 INSERT INTO users (username, password) VALUES ('user0', 'password0');

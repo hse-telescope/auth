@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/hse-telescope/auth/internal/repository/models"
 	storage "github.com/hse-telescope/auth/internal/repository/storage/queries"
@@ -72,27 +72,71 @@ func (s Storage) CheckUser(ctx context.Context, username string) (int64, string,
 	return userID, hashedPassword, nil
 }
 
-func (s Storage) CreateRefreshToken(ctx context.Context, userdID int64, refreshToken string, expiresAt time.Time) error {
-	q := storage.SaveRefreshTokenQuery
-	_, err := s.db.ExecContext(ctx, q, userdID, refreshToken, expiresAt)
-	return err
+func (s Storage) CreateProjectPermission(ctx context.Context, perm models.ProjectPermission) error {
+	res, err := s.db.ExecContext(ctx, storage.SetPermissionQuery,
+		perm.UserID,
+		perm.ProjectID,
+		perm.Role,
+	)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("permission already exists")
+	}
+
+	return nil
 }
 
-func (s Storage) DeleteRefreshToken(ctx context.Context, refreshToken string) error {
-	q := storage.DeleteRefreshTokenQuery
-	_, err := s.db.ExecContext(ctx, q, refreshToken)
-	return err
+func (s Storage) GetUserProjectRole(ctx context.Context, userID, projectID int64) (string, error) {
+	q := storage.GetPermissionQuery
+	var role string
+	err := s.db.QueryRowContext(ctx, q, userID, projectID).Scan(&role)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", sql.ErrNoRows
+		}
+		return "", fmt.Errorf("database error: %w", err)
+	}
+
+	return role, err
 }
 
-func (s Storage) GetRefreshToken(ctx context.Context, refreshToken string) (models.RefreshToken, error) {
-	q := storage.GetRefreshTokenQuery
-	var rt models.RefreshToken
-	err := s.db.QueryRowContext(ctx, q, refreshToken).Scan(&rt.ID, &rt.UserID, &rt.Token, &rt.ExpiresAt, &rt.CreatedAt)
-	return rt, err
+func (s Storage) UserExists(ctx context.Context, userID int64) (bool, error) {
+	q := storage.UserExistsQuery
+	var exists bool
+	err := s.db.QueryRowContext(ctx, q, userID).Scan(&exists)
+	return exists, err
 }
 
-func (s Storage) DeleteExpiredRefreshTokens(ctx context.Context) error {
-	q := storage.DeleteExpiredRefreshTokensQuery
-	_, err := s.db.ExecContext(ctx, q)
+func (s Storage) ProjectExists(ctx context.Context, projectID int64) (bool, error) {
+	q := storage.ProjectExistsQuery
+	var exists bool
+	err := s.db.QueryRowContext(ctx, q, projectID).Scan(&exists)
+	return exists, err
+}
+
+func (s Storage) UpdateRole(ctx context.Context, userID, projectID int64, role string) error {
+	res, err := s.db.ExecContext(ctx, storage.UpdatePermissionQuery,
+		userID, projectID, role,
+	)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func (s Storage) DeletePermission(ctx context.Context, userID, projectID int64) error {
+	q := storage.DeletePermissionQuery
+	_, err := s.db.ExecContext(ctx, q, userID, projectID)
 	return err
 }
