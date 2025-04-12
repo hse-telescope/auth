@@ -36,6 +36,8 @@ github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+l
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
 github.com/hse-telescope/utils v0.0.0-20250201151659-29082f551b54 h1:ux9Ci1SuiLFYNSCjIWqgpLxvcS4kzzJYDGGYSXu8DbI=
 github.com/hse-telescope/utils v0.0.0-20250201151659-29082f551b54/go.mod h1:nG2XNGIlpHNFa4FD2p840tgaB+yrzAEq90EHgbmNr5s=
+github.com/hse-telescope/utils v0.0.0-20250412190134-e84f2910ce93 h1:N/5bFmzEPA7+clD8t1+cIiHqdbYhiuAoK9cmjN8gmes=
+github.com/hse-telescope/utils v0.0.0-20250412190134-e84f2910ce93/go.mod h1:ljzTOtseIittLTjwtRkDycmmYrxn6x3KOlaCfxrg9Eo=
 github.com/jmoiron/sqlx v1.4.0 h1:1PLqN7S1UYp5t4SrVVnt4nUVNemrDAtxlulVe+Qgm3o=
 github.com/jmoiron/sqlx v1.4.0/go.mod h1:ZrZ7UsYB/weZdl2Bxg6jCRO9c3YHl8r3ahlKmRT4JLY=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=

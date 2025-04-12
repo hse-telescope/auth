@@ -3,7 +3,7 @@ module github.com/hse-telescope/auth
 go 1.23.0
 
 require (
-	github.com/hse-telescope/utils v0.0.0-20250201151659-29082f551b54
+	github.com/hse-telescope/utils v0.0.0-20250412190134-e84f2910ce93
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/olegdayo/omniconv v0.1.3
 	golang.org/x/crypto v0.36.0
