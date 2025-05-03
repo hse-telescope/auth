@@ -1,47 +1,58 @@
 package server
 
-import (
-	"github.com/hse-telescope/auth/internal/providers/users"
-)
-
 type User struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-type RoleAssignmentRequest struct {
+type GetUserProjectsRequest struct {
+	UserID int64 `json:"user_id"`
+}
+
+type GetRoleRequest struct {
 	UserID    int64  `json:"user_id"`
 	ProjectID int64  `json:"project_id"`
 	Role      string `json:"role"`
 }
 
-type ProjectRoleRequest struct {
+type CreateProjectPermissionRequest struct {
 	UserID    int64 `json:"user_id"`
 	ProjectID int64 `json:"project_id"`
 }
 
-type CredentialsRequest struct {
+type AssignRoleRequest struct {
+	UserID    int64  `json:"user_id"`
+	Username  string `json:"username"`
+	ProjectID int64  `json:"project_id"`
+	Role      string `json:"role"`
+}
+
+type UpdateRoleRequest struct {
+	UserID    int64  `json:"user_id"`
+	Username  string `json:"username"`
+	ProjectID int64  `json:"project_id"`
+	Role      string `json:"role"`
+}
+
+type DeleteRoleRequest struct {
+	UserID    int64  `json:"user_id"`
+	Username  string `json:"username"`
+	ProjectID int64  `json:"project_id"`
+}
+
+type RegisterRequest struct {
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type LoginRequest struct {
+	LoginData string `json:"loginData"`
+	Password  string `json:"password"`
 }
 
 type TokenRequest struct {
 	RefreshToken string `json:"token"`
-}
-
-func ServerUser2ProviderUser(user User) users.User {
-	return users.User{
-		ID:       user.ID,
-		Username: user.Username,
-		Password: user.Password,
-	}
-}
-
-func ProviderUser2ServerUser(user users.User) User {
-	return User{
-		ID:       user.ID,
-		Username: user.Username,
-		Password: user.Password,
-	}
 }

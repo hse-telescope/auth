@@ -11,18 +11,18 @@ import (
 )
 
 type Provider interface {
-	GetUsers(ctx context.Context) ([]users.User, error)
-	RegisterUser(ctx context.Context, username, password string) (users.TokenPair, error)
-	LoginUser(ctx context.Context, username, password string) (users.TokenPair, error)
-	RefreshTokens(ctx context.Context, refreshToken string) (users.TokenPair, error)
+	RegisterUser(ctx context.Context, username, email, password string) (users.TokenPair, error)
+	LoginUser(ctx context.Context, login, password string) (users.TokenPair, error)
+	//RefreshTokens(ctx context.Context, refreshToken string) (users.TokenPair, error)
 	GenerateTokens(ctx context.Context, userID int64) (users.TokenPair, error)
 	Logout(ctx context.Context, refreshToken string) error
 
+	GetUserProjects(ctx context.Context, userID int64) ([]int64, error)
 	CreateProject(ctx context.Context, userID, projectID int64) error
 	GetRole(ctx context.Context, userID, projectID int64) (string, error)
-	AssignRole(ctx context.Context, userID, projectID int64, role string) error
-	UpdateRole(ctx context.Context, userID, projectID int64, role string) error
-	DeleteRole(ctx context.Context, userID, projectID int64) error
+	AssignRole(ctx context.Context, userID int64, username string, projectID int64, role string) error
+	UpdateRole(ctx context.Context, userID int64, username string, projectID int64, role string) error
+	DeleteRole(ctx context.Context, userID int64, username string, projectID int64) error
 }
 
 type Server struct {
@@ -56,11 +56,15 @@ func (s *Server) setRouter() *http.ServeMux {
 	})
 
 	mux.HandleFunc("GET /ping", s.pingHandler)
-	mux.HandleFunc("GET /users", s.authMiddleware(s.getUsersHandler))
+
 	mux.HandleFunc("POST /register", s.registerUserHandler)
 	mux.HandleFunc("POST /login", s.loginUserHandler)
-	mux.HandleFunc("POST /refresh", s.refreshHandler)
+	//mux.HandleFunc("POST /refresh", s.refreshHandler)
 	mux.HandleFunc("POST /logout", s.logoutHandler)
+
+	// "POST /"
+
+	mux.HandleFunc("GET /usersProjects", s.getUserProjectsHandler)
 
 	mux.HandleFunc("POST /createProject", s.createProjectHandler)
 

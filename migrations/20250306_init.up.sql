@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
 );
 
@@ -11,5 +12,5 @@ CREATE TABLE IF NOT EXISTS project_permissions (
     PRIMARY KEY (user_id, project_id)
 );
 
-INSERT INTO users (username, password) VALUES ('user0', 'password0');
-INSERT INTO users (username, password) VALUES ('user1', 'password1');
+INSERT INTO users (username, email, password) VALUES ('user0', 'u0h@ex.ru', 'password0');
+INSERT INTO users (username, email, password) VALUES ('user1', 'u1@ex.ru', 'password1');

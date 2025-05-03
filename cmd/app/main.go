@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/hse-telescope/auth/internal/auth"
 	"github.com/hse-telescope/auth/internal/config"
 	"github.com/hse-telescope/auth/internal/providers/users"
 	"github.com/hse-telescope/auth/internal/repository/facade"
@@ -14,6 +15,10 @@ func main() {
 	configPath := os.Args[1]
 	conf, err := config.Parse(configPath)
 	if err != nil {
+		panic(err)
+	}
+
+	if err := auth.InitJWT(conf.JWTSecret); err != nil {
 		panic(err)
 	}
 

@@ -9,21 +9,27 @@ import (
 
 	"github.com/hse-telescope/auth/internal/auth"
 	"github.com/hse-telescope/auth/internal/repository/models"
-	"github.com/olegdayo/omniconv"
+	"github.com/hse-telescope/auth/internal/repository/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Repository interface {
-	GetUsers(ctx context.Context) ([]models.User, error)
-	AddUser(ctx context.Context, username, password string) (int64, error)
-	CheckUser(ctx context.Context, username string) (int64, string, error)
+	AddUser(ctx context.Context, username, email, password string) (int64, error)
+	CheckUserByUsername(ctx context.Context, username string) (int64, string, error)
+	CheckUserByEmail(ctx context.Context, email string) (int64, string, error)
 
-	UserExists(ctx context.Context, userID int64) (bool, error)
-	ProjectExists(ctx context.Context, projectID int64) (bool, error)
+	GetUserProjects(ctx context.Context, userID int64) ([]int64, error)
 	CreateProjectPermission(ctx context.Context, perm models.ProjectPermission) error
+
+	AssignRole(ctx context.Context, perm models.ProjectPermission) error
 	GetUserProjectRole(ctx context.Context, userID, projectID int64) (string, error)
 	UpdateRole(ctx context.Context, userID, projectID int64, role string) error
 	DeletePermission(ctx context.Context, userID, projectID int64) error
+
+	UserExists(ctx context.Context, userID int64) (bool, error)
+	ProjectExists(ctx context.Context, projectID int64) (bool, error)
+	GetUserIDByUsername(ctx context.Context, username string) (int64, error)
+	GetUserIDByEmail(ctx context.Context, email string) (int64, error)
 }
 
 type Provider struct {
@@ -35,43 +41,46 @@ func New(repository Repository) Provider {
 }
 
 var (
-	ErrPermissionExists   = errors.New("permission already exists")
-	ErrOnlyOwnerCanAssign = errors.New("only owner can assign roles")
-	ErrInvalidRole        = errors.New("invalid role")
-	ErrUserNotFound       = errors.New("user not found")
-	ErrProjectNotFound    = errors.New("project not found")
-	ErrPermissionNotFound = errors.New("permission not found")
+	ErrUsernameExists         = errors.New("username already exists")
+	ErrEmailExists            = errors.New("email already exists")
+	ErrIncorrectPassword      = errors.New("incorrect password")
+	ErrPermissionExists       = errors.New("permission already exists")
+	ErrInvalidRole            = errors.New("invalid role")
+	ErrUserNotFound           = errors.New("user not found")
+	ErrProjectNotFound        = errors.New("project not found")
+	ErrPermissionNotFound     = errors.New("permission not found")
+	ErrProjectExists          = errors.New("project already exists")
+	ErrAssignerNotFound       = errors.New("assigner not found")
+	ErrAssignableNotFound     = errors.New("assignable not found")
+	ErrAssignerRoleNotFound   = errors.New("assigner role not found")
+	ErrAssignableRoleNotFound = errors.New("assignable role not found")
+	ErrAssignerIsNotOwner     = errors.New("assigner is not owner")
+	ErrOwnerRoleChanging      = errors.New("cannot change owner role")
 )
-
-// GetAllUsers
-
-func (p Provider) GetUsers(ctx context.Context) ([]User, error) {
-	users, err := p.repository.GetUsers(ctx)
-
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil, err
-	}
-
-	return omniconv.ConvertSlice(users, DBUser2ProviderUser), nil
-}
 
 // Register
 
-func (p Provider) RegisterUser(ctx context.Context, username, password string) (TokenPair, error) {
+func (p Provider) RegisterUser(ctx context.Context, username, email, password string) (TokenPair, error) {
+	_, _, err := p.repository.CheckUserByUsername(ctx, username)
+	if err == nil {
+		return TokenPair{}, ErrUsernameExists
+	} else if err != sql.ErrNoRows {
+		return TokenPair{}, fmt.Errorf("failed to check user: %w", err)
+	}
+
+	_, _, err = p.repository.CheckUserByEmail(ctx, email)
+	if err == nil {
+		return TokenPair{}, ErrEmailExists
+	} else if err != sql.ErrNoRows {
+		return TokenPair{}, fmt.Errorf("failed to check user: %w", err)
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
 		return TokenPair{}, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	_, _, err = p.repository.CheckUser(ctx, username)
-	if err == nil {
-		return TokenPair{}, fmt.Errorf("user already exists")
-	} else if err != sql.ErrNoRows {
-		return TokenPair{}, fmt.Errorf("failed to check user: %w", err)
-	}
-
-	userID, err := p.repository.AddUser(ctx, username, string(hashedPassword))
+	userID, err := p.repository.AddUser(ctx, username, email, string(hashedPassword))
 	if err != nil {
 		return TokenPair{}, fmt.Errorf("failed to add user: %w", err)
 	}
@@ -81,11 +90,20 @@ func (p Provider) RegisterUser(ctx context.Context, username, password string) (
 
 // Login
 
-func (p Provider) LoginUser(ctx context.Context, username, password string) (TokenPair, error) {
-	userID, hashedPassword, err := p.repository.CheckUser(ctx, username)
+func (p Provider) LoginUser(ctx context.Context, loginData, password string) (TokenPair, error) {
+	var userID int64
+	var hashedPassword string
+	var err error
+
+	if strings.Contains(loginData, "@") {
+		userID, hashedPassword, err = p.repository.CheckUserByEmail(ctx, loginData)
+	} else {
+		userID, hashedPassword, err = p.repository.CheckUserByUsername(ctx, loginData)
+	}
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return TokenPair{}, fmt.Errorf("user not found")
+			return TokenPair{}, ErrUserNotFound
 		}
 		fmt.Println(err.Error())
 		return TokenPair{}, err
@@ -94,7 +112,7 @@ func (p Provider) LoginUser(ctx context.Context, username, password string) (Tok
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
 		fmt.Println(err.Error())
-		return TokenPair{}, fmt.Errorf("incorrect password")
+		return TokenPair{}, ErrIncorrectPassword
 	}
 
 	return p.GenerateTokens(ctx, userID)
@@ -102,14 +120,14 @@ func (p Provider) LoginUser(ctx context.Context, username, password string) (Tok
 
 // Refresh tokens
 
-func (p Provider) RefreshTokens(ctx context.Context, refreshToken string) (TokenPair, error) {
-	claims, err := auth.ValidateToken(refreshToken)
-	if err != nil {
-		return TokenPair{}, fmt.Errorf("invalid refresh token: %w", err)
-	}
+// func (p Provider) RefreshTokens(ctx context.Context, refreshToken string) (TokenPair, error) {
+// 	claims, err := auth.ValidateToken(refreshToken)
+// 	if err != nil {
+// 		return TokenPair{}, fmt.Errorf("invalid refresh token: %w", err)
+// 	}
 
-	return p.GenerateTokens(ctx, claims.UserID)
-}
+// 	return p.GenerateTokens(ctx, claims.UserID)
+// }
 
 // Generate token pair
 
@@ -132,19 +150,44 @@ func (p Provider) GenerateTokens(ctx context.Context, userID int64) (TokenPair, 
 }
 
 // Logout
-
 func (p Provider) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
 
+// Get user projects
+func (p Provider) GetUserProjects(ctx context.Context, userID int64) ([]int64, error) {
+	exists, err := p.repository.UserExists(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check user existence: %w", err)
+	}
+	if !exists {
+		return nil, ErrUserNotFound
+	}
+
+	projectIDs, err := p.repository.GetUserProjects(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get projects: %w", err)
+	}
+
+	return projectIDs, nil
+}
+
 // Create project
 func (p Provider) CreateProject(ctx context.Context, creatorID, projectID int64) error {
-	exists, err := p.repository.UserExists(ctx, creatorID)
+	userExists, err := p.repository.UserExists(ctx, creatorID)
 	if err != nil {
 		return fmt.Errorf("failed to check user existence: %w", err)
 	}
-	if !exists {
+	if !userExists {
 		return ErrUserNotFound
+	}
+
+	projectExists, err := p.repository.ProjectExists(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to check project existence: %w", err)
+	}
+	if projectExists {
+		return ErrProjectExists
 	}
 
 	perm := models.ProjectPermission{
@@ -167,48 +210,7 @@ func (p Provider) CreateProject(ctx context.Context, creatorID, projectID int64)
 	return nil
 }
 
-// Set permission
-func (p Provider) AssignRole(ctx context.Context, userID, projectID int64, role string) error {
-	if !isValidRole(role) {
-		return fmt.Errorf("invalid role")
-	}
-
-	userExists, err := p.repository.UserExists(ctx, userID)
-	if err != nil {
-		return fmt.Errorf("failed to check user: %w", err)
-	}
-	if !userExists {
-		return ErrUserNotFound
-	}
-
-	projectExists, err := p.repository.ProjectExists(ctx, projectID)
-	if err != nil {
-		return fmt.Errorf("failed to check project: %w", err)
-	}
-	if !projectExists {
-		return ErrProjectNotFound
-	}
-
-	currentRole, err := p.repository.GetUserProjectRole(ctx, userID, projectID)
-	if err == nil && currentRole == RoleOwner && role != RoleOwner {
-		return fmt.Errorf("cannot change owner role")
-	}
-
-	perm := models.ProjectPermission{
-		UserID:    userID,
-		ProjectID: projectID,
-		Role:      role,
-	}
-
-	return p.repository.CreateProjectPermission(ctx, perm)
-}
-
-func isValidRole(role string) bool {
-	return role == RoleOwner || role == RoleEditor || role == RoleViewer
-}
-
 // Get users role
-
 func (p Provider) GetRole(ctx context.Context, userID, projectID int64) (string, error) {
 	userExists, err := p.repository.UserExists(ctx, userID)
 	if err != nil {
@@ -237,54 +239,15 @@ func (p Provider) GetRole(ctx context.Context, userID, projectID int64) (string,
 	return role, nil
 }
 
-// UpdateRole
-func (p Provider) UpdateRole(ctx context.Context, userID, projectID int64, role string) error {
+// Set permission
+func (p Provider) AssignRole(ctx context.Context, userID int64, username string, projectID int64, role string) error {
 	if !isValidRole(role) {
 		return ErrInvalidRole
 	}
 
-	if exists, err := p.repository.UserExists(ctx, userID); err != nil || !exists {
-		return ErrUserNotFound
-	}
-	if exists, err := p.repository.ProjectExists(ctx, projectID); err != nil || !exists {
-		return ErrProjectNotFound
-	}
-
-	currentRole, err := p.repository.GetUserProjectRole(ctx, userID, projectID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrPermissionNotFound
-		}
-		return fmt.Errorf("failed to get current role: %w", err)
-	}
-
-	if currentRole == RoleOwner && role != RoleOwner {
-		return fmt.Errorf("cannot change owner role")
-	}
-
-	return p.repository.UpdateRole(ctx, userID, projectID, role)
-}
-
-func (p Provider) DeleteRole(ctx context.Context, userID, projectID int64) error {
-
-	if exists, err := p.repository.UserExists(ctx, userID); err != nil || !exists {
-		return ErrUserNotFound
-	}
-	if exists, err := p.repository.ProjectExists(ctx, projectID); err != nil || !exists {
-		return ErrProjectNotFound
-	}
-
-	if role, err := p.repository.GetUserProjectRole(ctx, userID, projectID); err == nil && role == RoleOwner {
-		return fmt.Errorf("cannot delete owner role")
-	}
-
-	return p.repository.DeletePermission(ctx, userID, projectID)
-}
-
-func (p Provider) DeleteUsersProjectPermission(ctx context.Context, userID, projectID int64) error {
 	userExists, err := p.repository.UserExists(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("failed to check user existence: %w", err)
+		return fmt.Errorf("failed to check owner: %w", err)
 	}
 	if !userExists {
 		return ErrUserNotFound
@@ -292,19 +255,161 @@ func (p Provider) DeleteUsersProjectPermission(ctx context.Context, userID, proj
 
 	projectExists, err := p.repository.ProjectExists(ctx, projectID)
 	if err != nil {
-		return fmt.Errorf("failed to check project existence: %w", err)
+		return fmt.Errorf("failed to check project: %w", err)
 	}
 	if !projectExists {
 		return ErrProjectNotFound
 	}
 
-	_, err = p.repository.GetUserProjectRole(ctx, userID, projectID)
+	assignerRole, err := p.repository.GetUserProjectRole(ctx, userID, projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrPermissionNotFound
+		if err == sql.ErrNoRows {
+			return ErrAssignerRoleNotFound
 		}
-		return fmt.Errorf("failed to get role: %w", err)
+		return fmt.Errorf("failed to check ownership: %w", err)
+	}
+	if assignerRole != "owner" {
+		return ErrAssignerIsNotOwner
 	}
 
-	return p.repository.DeletePermission(ctx, userID, projectID)
+	assignableUserID, err := p.repository.GetUserIDByUsername(ctx, username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrAssignableNotFound
+		}
+		return fmt.Errorf("failed to get user_id from username: %w", err)
+	}
+
+	currentRole, err := p.repository.GetUserProjectRole(ctx, assignableUserID, projectID)
+	if err != nil && err != sql.ErrNoRows {
+		if err == storage.ErrPermissionExists {
+			return ErrPermissionExists
+		}
+		return fmt.Errorf("failed to check assignable role: %w", err)
+	}
+	if currentRole == RoleOwner {
+		return ErrOwnerRoleChanging
+	}
+
+	perm := models.ProjectPermission{
+		UserID:    assignableUserID,
+		ProjectID: projectID,
+		Role:      role,
+	}
+
+	err = p.repository.AssignRole(ctx, perm)
+	if err == storage.ErrPermissionExists {
+		return ErrPermissionExists
+	}
+
+	return nil
+}
+
+// UpdateRole
+func (p Provider) UpdateRole(ctx context.Context, userID int64, username string, projectID int64, role string) error {
+	if !isValidRole(role) {
+		return ErrInvalidRole
+	}
+
+	userExists, err := p.repository.UserExists(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check owner: %w", err)
+	}
+	if !userExists {
+		return ErrUserNotFound
+	}
+
+	projectExists, err := p.repository.ProjectExists(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to check project: %w", err)
+	}
+	if !projectExists {
+		return ErrProjectNotFound
+	}
+
+	assignerRole, err := p.repository.GetUserProjectRole(ctx, userID, projectID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrAssignerNotFound
+		}
+		return fmt.Errorf("failed to check ownership: %w", err)
+	}
+	if assignerRole != "owner" {
+		return ErrAssignerIsNotOwner
+	}
+
+	assignableUserID, err := p.repository.GetUserIDByUsername(ctx, username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrAssignableNotFound
+		}
+		return fmt.Errorf("failed to get user_id from username: %w", err)
+	}
+
+	currentRole, err := p.repository.GetUserProjectRole(ctx, assignableUserID, projectID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrAssignableRoleNotFound
+		}
+		return fmt.Errorf("failed to check assignable role: %w", err)
+	}
+	if currentRole == RoleOwner {
+		return ErrOwnerRoleChanging
+	}
+
+	return p.repository.UpdateRole(ctx, assignableUserID, projectID, role)
+}
+
+func (p Provider) DeleteRole(ctx context.Context, userID int64, username string, projectID int64) error {
+	userExists, err := p.repository.UserExists(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check owner: %w", err)
+	}
+	if !userExists {
+		return ErrUserNotFound
+	}
+
+	projectExists, err := p.repository.ProjectExists(ctx, projectID)
+	if err != nil {
+		return fmt.Errorf("failed to check project: %w", err)
+	}
+	if !projectExists {
+		return ErrProjectNotFound
+	}
+
+	assignerRole, err := p.repository.GetUserProjectRole(ctx, userID, projectID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrAssignerNotFound
+		}
+		return fmt.Errorf("failed to check ownership: %w", err)
+	}
+	if assignerRole != "owner" {
+		return ErrAssignerIsNotOwner
+	}
+
+	assignableUserID, err := p.repository.GetUserIDByUsername(ctx, username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrAssignableNotFound
+		}
+		return fmt.Errorf("failed to get user_id from username: %w", err)
+	}
+
+	currentRole, err := p.repository.GetUserProjectRole(ctx, assignableUserID, projectID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrAssignableRoleNotFound
+		}
+		return fmt.Errorf("failed to check assignable role: %w", err)
+	}
+	if currentRole == RoleOwner {
+		return ErrOwnerRoleChanging
+	}
+
+	return p.repository.DeletePermission(ctx, assignableUserID, projectID)
+}
+
+func isValidRole(role string) bool {
+	return (role != RoleOwner) && (role == RoleEditor || role == RoleViewer)
 }

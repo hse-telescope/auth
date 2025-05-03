@@ -1,12 +1,9 @@
-// Get all users
-curl -v GET localhost:8081/users
-
 
 // Register user
-curl -v -X POST localhost:8081/register -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
 
+curl -X POST http://localhost:8081/register -H "Content-Type: application/json" -d "{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"testpass\"}"
 
-// Login user
+// Login user by username
 curl -v -X POST localhost:8081/login -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
 
 // Get users (token check)

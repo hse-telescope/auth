@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/hse-telescope/auth/internal/providers/users"
 )
@@ -25,42 +23,24 @@ func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("pong"))
 }
 
-// Get all users
-func (s *Server) getUsersHandler(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
-	users, err := s.provider.GetUsers(context.Background())
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Something went wrong: " + err.Error()))
-		return
-	}
-	body, err := json.Marshal(users)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Something went wrong"))
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(body)
-}
-
 // Login user
 func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
-	var req CredentialsRequest
+	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
-	tokens, err := s.provider.LoginUser(context.Background(), req.Username, req.Password)
+	tokens, err := s.provider.LoginUser(context.Background(), req.LoginData, req.Password)
 	if err != nil {
-		if err.Error() == "user not found" {
+		switch {
+		case errors.Is(err, users.ErrUserNotFound):
 			http.Error(w, "User not found", http.StatusNotFound)
-		} else if err.Error() == "incorrect password" {
+		case errors.Is(err, users.ErrIncorrectPassword):
 			http.Error(w, "Incorrect password", http.StatusUnauthorized)
-		} else {
+		default:
 			http.Error(w, "Could not login user", http.StatusInternalServerError)
 		}
 		return
@@ -81,22 +61,25 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
 
-	var req CredentialsRequest
+	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
-	if req.Username == "" || req.Password == "" {
+	if req.Username == "" || req.Email == "" || req.Password == "" {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
-	tokens, err := s.provider.RegisterUser(context.Background(), req.Username, req.Password)
+	tokens, err := s.provider.RegisterUser(context.Background(), req.Username, req.Email, req.Password)
 	if err != nil {
-		if err.Error() == "user already exists" {
-			http.Error(w, "User already registered", http.StatusConflict)
-		} else {
+		switch {
+		case errors.Is(err, users.ErrUsernameExists):
+			http.Error(w, "Username already exists", http.StatusConflict)
+		case errors.Is(err, users.ErrEmailExists):
+			http.Error(w, "Email already exists", http.StatusConflict)
+		default:
 			http.Error(w, "Could not register user", http.StatusInternalServerError)
 		}
 		return
@@ -125,7 +108,7 @@ func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]string{
-		"message": "Logout successful (note: refresh tokens are still valid)",
+		"message": "Logout successful",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -135,42 +118,65 @@ func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // Refresh
 
-func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
-	setCommonHeaders(w)
+// func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
+// 	setCommonHeaders(w)
 
-	var req TokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
+// 	var req TokenRequest
+// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+// 		http.Error(w, "Invalid request", http.StatusBadRequest)
+// 		return
+// 	}
 
-	tokens, err := s.provider.RefreshTokens(context.Background(), req.RefreshToken)
+// 	tokens, err := s.provider.RefreshTokens(context.Background(), req.RefreshToken)
+// 	if err != nil {
+// 		if err.Error() == "invalid refresh token" {
+// 			s.respondWithError(w, http.StatusUnauthorized, "Invalid refresh token")
+// 		} else {
+// 			s.respondWithError(w, http.StatusInternalServerError,
+// 				fmt.Sprintf("Refresh failed: %v", err))
+// 		}
+// 		return
+// 	}
+
+// 	response := map[string]interface{}{
+// 		"message":       "Refresh successful!",
+// 		"access_token":  tokens.AccessToken,
+// 		"refresh_token": tokens.RefreshToken,
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusOK)
+// 	json.NewEncoder(w).Encode(response)
+// }
+
+// Get user projects handler
+
+func (s *Server) getUserProjectsHandler(w http.ResponseWriter, r *http.Request) {
+	var req GetUserProjectsRequest
+	var err error
+
+	req.UserID, err = strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
 	if err != nil {
-		if err.Error() == "invalid refresh token" {
-			s.respondWithError(w, http.StatusUnauthorized, "Invalid refresh token")
-		} else {
-			s.respondWithError(w, http.StatusInternalServerError,
-				fmt.Sprintf("Refresh failed: %v", err))
-		}
+		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
-	response := map[string]interface{}{
-		"message":       "Refresh successful!",
-		"access_token":  tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
+	projectIDs, err := s.provider.GetUserProjects(context.Background(), req.UserID)
+	if err != nil {
+		s.respondWithError(w, http.StatusNotFound, err.Error())
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	s.respondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"project_ids": projectIDs,
+	})
 }
 
 // Create project
 
 func (s *Server) createProjectHandler(w http.ResponseWriter, r *http.Request) {
 
-	var req ProjectRoleRequest
+	var req CreateProjectPermissionRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
@@ -182,27 +188,55 @@ func (s *Server) createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, users.ErrUserNotFound):
 			s.respondWithError(w, http.StatusNotFound, "user not found")
-		case errors.Is(err, users.ErrPermissionExists):
+		case errors.Is(err, users.ErrProjectExists):
 			s.respondWithError(w, http.StatusConflict, "project already exists")
+		case errors.Is(err, users.ErrPermissionExists):
+			s.respondWithError(w, http.StatusConflict, "project permission already exists")
 		default:
-			s.respondWithError(w, http.StatusInternalServerError, "failed to create project")
+			s.respondWithError(w, http.StatusInternalServerError, "failed to create project: "+err.Error())
 		}
 		return
 	}
 
 	s.respondWithJSON(w, http.StatusCreated, map[string]interface{}{
 		"project_id": req.ProjectID,
-		"message":    "project created successfully",
+		"status":     "success",
 	})
-
-	s.respondWithJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // Get users role in project
+type Role int
+
+const (
+	Viewer Role = iota
+	Editor
+	Owner
+)
+
+func parseRole(roleStr string) (Role, bool) {
+	switch roleStr {
+	case "viewer":
+		return Viewer, true
+	case "editor":
+		return Editor, true
+	case "owner":
+		return Owner, true
+	default:
+		return Viewer, false
+	}
+}
+
+func hasPermission(currRoleStr, reqRoleStr string) bool {
+	currRole, ok1 := parseRole(currRoleStr)
+	reqRole, ok2 := parseRole(reqRoleStr)
+	if !ok1 || !ok2 {
+		return false
+	}
+	return currRole >= reqRole
+}
 
 func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Request) {
-
-	var req ProjectRoleRequest
+	var req GetRoleRequest
 	var err error
 
 	req.UserID, err = strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
@@ -218,7 +252,7 @@ func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	role, err := s.provider.GetRole(r.Context(), req.UserID, req.ProjectID)
+	currRole, err := s.provider.GetRole(r.Context(), req.UserID, req.ProjectID)
 	if err != nil {
 		switch {
 		case errors.Is(err, users.ErrUserNotFound):
@@ -234,21 +268,23 @@ func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	s.respondWithJSON(w, http.StatusOK, map[string]string{"role": role})
+	isRoleEnough := hasPermission(currRole, req.Role)
+
+	s.respondWithJSON(w, http.StatusOK, map[string]bool{"isRoleEnough": isRoleEnough})
 }
 
 // Assign role
 
 func (s *Server) assignRoleHandler(w http.ResponseWriter, r *http.Request) {
 
-	var req RoleAssignmentRequest
+	var req AssignRoleRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
-	err := s.provider.AssignRole(r.Context(), req.UserID, req.ProjectID, req.Role)
+	err := s.provider.AssignRole(r.Context(), req.UserID, req.Username, req.ProjectID, req.Role)
 	if err != nil {
 		switch {
 		case errors.Is(err, users.ErrUserNotFound):
@@ -259,6 +295,14 @@ func (s *Server) assignRoleHandler(w http.ResponseWriter, r *http.Request) {
 			s.respondWithError(w, http.StatusBadRequest, "invalid role")
 		case errors.Is(err, users.ErrPermissionExists):
 			s.respondWithError(w, http.StatusConflict, "role already assigned")
+		case errors.Is(err, users.ErrAssignerIsNotOwner):
+			s.respondWithError(w, http.StatusConflict, "assigner is not owner")
+		case errors.Is(err, users.ErrAssignerRoleNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assigner role not found")
+		case errors.Is(err, users.ErrAssignableNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assignable not found")
+		case errors.Is(err, users.ErrOwnerRoleChanging):
+			s.respondWithError(w, http.StatusForbidden, "cannot assign role to owner")
 		default:
 			log.Printf("AssignRole error: %v", err)
 			s.respondWithError(w, http.StatusInternalServerError, "failed to assign role")
@@ -271,14 +315,14 @@ func (s *Server) assignRoleHandler(w http.ResponseWriter, r *http.Request) {
 
 // Update role
 func (s *Server) updateRoleHandler(w http.ResponseWriter, r *http.Request) {
-	var req RoleAssignmentRequest
+	var req UpdateRoleRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
-	err := s.provider.UpdateRole(r.Context(), req.UserID, req.ProjectID, req.Role)
+	err := s.provider.UpdateRole(r.Context(), req.UserID, req.Username, req.ProjectID, req.Role)
 	if err != nil {
 		switch {
 		case errors.Is(err, users.ErrUserNotFound):
@@ -289,8 +333,16 @@ func (s *Server) updateRoleHandler(w http.ResponseWriter, r *http.Request) {
 			s.respondWithError(w, http.StatusNotFound, "permission not found")
 		case errors.Is(err, users.ErrInvalidRole):
 			s.respondWithError(w, http.StatusBadRequest, "invalid role")
-		case strings.Contains(err.Error(), "cannot change owner"):
-			s.respondWithError(w, http.StatusForbidden, err.Error())
+		case errors.Is(err, users.ErrPermissionExists):
+			s.respondWithError(w, http.StatusForbidden, "assigner is not owner")
+		case errors.Is(err, users.ErrAssignerRoleNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assigner role not found")
+		case errors.Is(err, users.ErrAssignableNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assignable not found")
+		case errors.Is(err, users.ErrAssignableRoleNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assignable role not found")
+		case errors.Is(err, users.ErrOwnerRoleChanging):
+			s.respondWithError(w, http.StatusForbidden, "cannot update owner role")
 		default:
 			log.Printf("UpdateRole error: %v", err)
 			s.respondWithError(w, http.StatusInternalServerError, "failed to update role")
@@ -303,14 +355,14 @@ func (s *Server) updateRoleHandler(w http.ResponseWriter, r *http.Request) {
 
 // Delete role
 func (s *Server) deleteRoleHandler(w http.ResponseWriter, r *http.Request) {
-	var req ProjectRoleRequest
+	var req DeleteRoleRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
-	err := s.provider.DeleteRole(r.Context(), req.UserID, req.ProjectID)
+	err := s.provider.DeleteRole(r.Context(), req.UserID, req.Username, req.ProjectID)
 	if err != nil {
 		switch {
 		case errors.Is(err, users.ErrUserNotFound):
@@ -319,8 +371,18 @@ func (s *Server) deleteRoleHandler(w http.ResponseWriter, r *http.Request) {
 			s.respondWithError(w, http.StatusNotFound, "project not found")
 		case errors.Is(err, users.ErrPermissionNotFound):
 			s.respondWithError(w, http.StatusNotFound, "permission not found")
-		case strings.Contains(err.Error(), "cannot delete owner"):
-			s.respondWithError(w, http.StatusForbidden, err.Error())
+		case errors.Is(err, users.ErrPermissionExists):
+			s.respondWithError(w, http.StatusConflict, "role already assigned")
+		case errors.Is(err, users.ErrAssignerIsNotOwner):
+			s.respondWithError(w, http.StatusConflict, "assigner is not owner")
+		case errors.Is(err, users.ErrAssignerRoleNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assigner role not found")
+		case errors.Is(err, users.ErrAssignableNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assignable not found")
+		case errors.Is(err, users.ErrAssignableRoleNotFound):
+			s.respondWithError(w, http.StatusNotFound, "assignable role not found")
+		case errors.Is(err, users.ErrOwnerRoleChanging):
+			s.respondWithError(w, http.StatusForbidden, "cannot delete owner role")
 		default:
 			log.Printf("DeleteRole error: %v", err)
 			s.respondWithError(w, http.StatusInternalServerError, "failed to delete role")
