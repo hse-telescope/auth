@@ -41,7 +41,7 @@ func New(conf config.Config, provider Provider) *Server {
 func (s *Server) setRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ping", s.pingHandler)
-	mux.HandleFunc("GET /users", s.getUsersHandler)
+	mux.HandleFunc("GET /users", s.authMiddleware(s.getUsersHandler))
 	mux.HandleFunc("POST /register", s.registerUserHandler)
 	mux.HandleFunc("POST /login", s.loginUserHandler)
 	return mux
