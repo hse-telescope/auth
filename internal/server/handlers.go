@@ -23,6 +23,12 @@ func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("pong"))
 }
 
+//////////////////
+//				//
+//	Auth base	//
+//				//
+//////////////////
+
 // Login user
 func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	setCommonHeaders(w)
@@ -116,41 +122,13 @@ func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// Refresh
-
-// func (s *Server) refreshHandler(w http.ResponseWriter, r *http.Request) {
-// 	setCommonHeaders(w)
-
-// 	var req TokenRequest
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		http.Error(w, "Invalid request", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	tokens, err := s.provider.RefreshTokens(context.Background(), req.RefreshToken)
-// 	if err != nil {
-// 		if err.Error() == "invalid refresh token" {
-// 			s.respondWithError(w, http.StatusUnauthorized, "Invalid refresh token")
-// 		} else {
-// 			s.respondWithError(w, http.StatusInternalServerError,
-// 				fmt.Sprintf("Refresh failed: %v", err))
-// 		}
-// 		return
-// 	}
-
-// 	response := map[string]interface{}{
-// 		"message":       "Refresh successful!",
-// 		"access_token":  tokens.AccessToken,
-// 		"refresh_token": tokens.RefreshToken,
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	json.NewEncoder(w).Encode(response)
-// }
+//////////////////////
+//					//
+//	Role managment	//
+//					//
+//////////////////////
 
 // Get user projects handler
-
 func (s *Server) getUserProjectsHandler(w http.ResponseWriter, r *http.Request) {
 	var req GetUserProjectsRequest
 	var err error
@@ -173,7 +151,6 @@ func (s *Server) getUserProjectsHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 // Create project
-
 func (s *Server) createProjectHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req CreateProjectPermissionRequest
@@ -274,7 +251,6 @@ func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Reques
 }
 
 // Assign role
-
 func (s *Server) assignRoleHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req AssignRoleRequest
@@ -393,8 +369,92 @@ func (s *Server) deleteRoleHandler(w http.ResponseWriter, r *http.Request) {
 	s.respondWithJSON(w, http.StatusOK, map[string]string{"status": "role deleted"})
 }
 
-// Responces:
+///////////////////////
+//					 //
+// Change login data //
+//					 //
+///////////////////////
 
+func (s *Server) changeUsernameHandler(w http.ResponseWriter, r *http.Request) {
+	var req ChangeUsernameRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.respondWithError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	err := s.provider.ChangeUsername(r.Context(), req.OldUsername, req.NewUsername, req.Email, req.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, users.ErrUserNotFound):
+			s.respondWithError(w, http.StatusNotFound, "user not found")
+		case errors.Is(err, users.ErrIncorrectPassword):
+			s.respondWithError(w, http.StatusUnauthorized, "incorrect password")
+		case errors.Is(err, users.ErrUsernameExists):
+			s.respondWithError(w, http.StatusConflict, "username already exists")
+		default:
+			log.Printf("Change username error: %v", err)
+			s.respondWithError(w, http.StatusInternalServerError, "failed to change username")
+		}
+		return
+	}
+
+	s.respondWithJSON(w, http.StatusOK, map[string]string{"status": "username changed"})
+}
+
+func (s *Server) changeEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var req ChangeEmailRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.respondWithError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	err := s.provider.ChangeEmail(r.Context(), req.Username, req.OldEmail, req.NewEmail, req.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, users.ErrUserNotFound):
+			s.respondWithError(w, http.StatusNotFound, "user not found")
+		case errors.Is(err, users.ErrIncorrectPassword):
+			s.respondWithError(w, http.StatusUnauthorized, "incorrect password")
+		case errors.Is(err, users.ErrEmailExists):
+			s.respondWithError(w, http.StatusConflict, "email already exists")
+		default:
+			log.Printf("Change email error: %v", err)
+			s.respondWithError(w, http.StatusInternalServerError, "failed to change email")
+		}
+		return
+	}
+
+	s.respondWithJSON(w, http.StatusOK, map[string]string{"status": "email changed"})
+}
+
+func (s *Server) changePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var req ChangePasswordRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.respondWithError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	err := s.provider.ChangePassword(r.Context(), req.Username, req.Email, req.OldPassword, req.NewPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, users.ErrUserNotFound):
+			s.respondWithError(w, http.StatusNotFound, "user not found")
+		case errors.Is(err, users.ErrIncorrectPassword):
+			s.respondWithError(w, http.StatusUnauthorized, "incorrect password")
+		default:
+			log.Printf("Change password error: %v", err)
+			s.respondWithError(w, http.StatusInternalServerError, "failed to change password")
+		}
+		return
+	}
+
+	s.respondWithJSON(w, http.StatusOK, map[string]string{"status": "password changed"})
+}
+
+// Responces:
 func (s *Server) respondWithError(w http.ResponseWriter, code int, message string) {
 	s.respondWithJSON(w, code, map[string]string{"error": message})
 }

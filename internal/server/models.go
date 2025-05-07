@@ -11,6 +11,10 @@ type GetUserProjectsRequest struct {
 	UserID int64 `json:"user_id"`
 }
 
+type PasswordResetRequest struct {
+	Email string `json:"email"`
+}
+
 type GetRoleRequest struct {
 	UserID    int64  `json:"user_id"`
 	ProjectID int64  `json:"project_id"`
@@ -55,4 +59,25 @@ type LoginRequest struct {
 
 type TokenRequest struct {
 	RefreshToken string `json:"token"`
+}
+
+type ChangeUsernameRequest struct {
+	OldUsername string `json:"old_username"`
+	NewUsername string `json:"new_username"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+}
+
+type ChangeEmailRequest struct {
+	Username string `json:"username"`
+	OldEmail string `json:"old_email"`
+	NewEmail string `json:"new_email"`
+	Password string `json:"password"`
+}
+
+type ChangePasswordRequest struct {
+	Username    string `json:"username"`
+	Email       string `json:"email"`
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
 }

@@ -23,6 +23,10 @@ type Provider interface {
 	AssignRole(ctx context.Context, userID int64, username string, projectID int64, role string) error
 	UpdateRole(ctx context.Context, userID int64, username string, projectID int64, role string) error
 	DeleteRole(ctx context.Context, userID int64, username string, projectID int64) error
+
+	ChangeUsername(ctx context.Context, oldUsername, newUsername, email, password string) error
+	ChangeEmail(ctx context.Context, username, oldEmail, newEmail, password string) error
+	ChangePassword(ctx context.Context, username, email, oldPassword, newPassword string) error
 }
 
 type Server struct {
@@ -62,8 +66,6 @@ func (s *Server) setRouter() *http.ServeMux {
 	//mux.HandleFunc("POST /refresh", s.refreshHandler)
 	mux.HandleFunc("POST /logout", s.logoutHandler)
 
-	// "POST /"
-
 	mux.HandleFunc("GET /usersProjects", s.getUserProjectsHandler)
 
 	mux.HandleFunc("POST /createProject", s.createProjectHandler)
@@ -72,6 +74,12 @@ func (s *Server) setRouter() *http.ServeMux {
 	mux.HandleFunc("POST /assignRole", s.assignRoleHandler)
 	mux.HandleFunc("PUT /updateRole", s.updateRoleHandler)
 	mux.HandleFunc("DELETE /deleteRole", s.deleteRoleHandler)
+
+	//mux.HandleFunc("POST /forgotPassword", s.forgotPasswordHandler)
+
+	mux.HandleFunc("PUT /username", s.changeUsernameHandler)
+	mux.HandleFunc("PUT /email", s.changeEmailHandler)
+	mux.HandleFunc("PUT /password", s.changePasswordHandler)
 
 	return mux
 }

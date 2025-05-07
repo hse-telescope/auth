@@ -23,6 +23,10 @@ type Storage interface {
 	GetUserIDByEmail(ctx context.Context, email string) (int64, error)
 	UserExists(ctx context.Context, userID int64) (bool, error)
 	ProjectExists(ctx context.Context, projectID int64) (bool, error)
+
+	ChangeUsername(ctx context.Context, username, email, password string) error
+	ChangeEmail(ctx context.Context, username, email, password string) error
+	ChangePassword(ctx context.Context, username, email, password string) error
 }
 
 type Facade struct {
@@ -86,3 +90,16 @@ func (f Facade) GetUserIDByUsername(ctx context.Context, username string) (int64
 func (f Facade) GetUserIDByEmail(ctx context.Context, email string) (int64, error) {
 	return f.storage.GetUserIDByEmail(ctx, email)
 }
+
+func (f Facade) ChangeUsername(ctx context.Context, username, email, password string) error {
+	return f.storage.ChangeUsername(ctx, username, email, password)
+}
+
+func (f Facade) ChangeEmail(ctx context.Context, username, email, password string) error {
+	return f.storage.ChangeEmail(ctx, username, email, password)
+}
+
+func (f Facade) ChangePassword(ctx context.Context, username, email, password string) error {
+	return f.storage.ChangePassword(ctx, username, email, password)
+}
+

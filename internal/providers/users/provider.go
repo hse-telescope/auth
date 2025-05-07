@@ -30,6 +30,10 @@ type Repository interface {
 	ProjectExists(ctx context.Context, projectID int64) (bool, error)
 	GetUserIDByUsername(ctx context.Context, username string) (int64, error)
 	GetUserIDByEmail(ctx context.Context, email string) (int64, error)
+
+	ChangeUsername(ctx context.Context, username, email, password string) error
+	ChangeEmail(ctx context.Context, username, email, password string) error
+	ChangePassword(ctx context.Context, username, email, password string) error
 }
 
 type Provider struct {
@@ -56,10 +60,16 @@ var (
 	ErrAssignableRoleNotFound = errors.New("assignable role not found")
 	ErrAssignerIsNotOwner     = errors.New("assigner is not owner")
 	ErrOwnerRoleChanging      = errors.New("cannot change owner role")
+	ErrPasswordConflict       = errors.New("passwords by username and email are different")
 )
 
-// Register
+//////////////////
+//				//
+//	Auth base	//
+//				//
+//////////////////
 
+// Register
 func (p Provider) RegisterUser(ctx context.Context, username, email, password string) (TokenPair, error) {
 	_, _, err := p.repository.CheckUserByUsername(ctx, username)
 	if err == nil {
@@ -89,7 +99,6 @@ func (p Provider) RegisterUser(ctx context.Context, username, email, password st
 }
 
 // Login
-
 func (p Provider) LoginUser(ctx context.Context, loginData, password string) (TokenPair, error) {
 	var userID int64
 	var hashedPassword string
@@ -118,17 +127,6 @@ func (p Provider) LoginUser(ctx context.Context, loginData, password string) (To
 	return p.GenerateTokens(ctx, userID)
 }
 
-// Refresh tokens
-
-// func (p Provider) RefreshTokens(ctx context.Context, refreshToken string) (TokenPair, error) {
-// 	claims, err := auth.ValidateToken(refreshToken)
-// 	if err != nil {
-// 		return TokenPair{}, fmt.Errorf("invalid refresh token: %w", err)
-// 	}
-
-// 	return p.GenerateTokens(ctx, claims.UserID)
-// }
-
 // Generate token pair
 
 func (p Provider) GenerateTokens(ctx context.Context, userID int64) (TokenPair, error) {
@@ -153,6 +151,12 @@ func (p Provider) GenerateTokens(ctx context.Context, userID int64) (TokenPair, 
 func (p Provider) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
+
+//////////////////////
+//					//
+//	Role managment	//
+//					//
+//////////////////////
 
 // Get user projects
 func (p Provider) GetUserProjects(ctx context.Context, userID int64) ([]int64, error) {
@@ -412,4 +416,105 @@ func (p Provider) DeleteRole(ctx context.Context, userID int64, username string,
 
 func isValidRole(role string) bool {
 	return (role != RoleOwner) && (role == RoleEditor || role == RoleViewer)
+}
+
+///////////////////////
+//					 //
+// Change login data //
+//					 //
+///////////////////////
+
+func (p Provider) ChangeUsername(ctx context.Context, oldUsername, newUsername, email, password string) error {
+	_, hashedPassword, err := p.repository.CheckUserByUsername(ctx, oldUsername)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	if err != nil {
+		return ErrIncorrectPassword
+	}
+
+	err = p.repository.ChangeUsername(ctx, newUsername, email, hashedPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		} else if strings.Contains(err.Error(), "pq: duplicate key value violates unique constraint ") {
+			return ErrUsernameExists
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (p Provider) ChangeEmail(ctx context.Context, username, oldEmail, newEmail, password string) error {
+	_, hashedPassword, err := p.repository.CheckUserByEmail(ctx, oldEmail)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	if err != nil {
+		return ErrIncorrectPassword
+	}
+
+	err = p.repository.ChangeEmail(ctx, username, newEmail, hashedPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		} else if strings.Contains(err.Error(), "pq: duplicate key value violates unique constraint ") {
+			return ErrEmailExists
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (p Provider) ChangePassword(ctx context.Context, username, email, currPassword, newPassword string) error {
+	_, hashedPasswordByEmail, err := p.repository.CheckUserByEmail(ctx, email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		}
+		return err
+	}
+	_, hashedPasswordByUsername, err := p.repository.CheckUserByUsername(ctx, username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	if hashedPasswordByEmail != hashedPasswordByUsername {
+		return ErrPasswordConflict
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPasswordByUsername), []byte(currPassword))
+	if err != nil {
+		return ErrIncorrectPassword
+	}
+
+	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		return fmt.Errorf("failed to hash new password: %w", err)
+	}
+
+	err = p.repository.ChangePassword(ctx, username, email, string(hashedNewPassword))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	return nil
 }

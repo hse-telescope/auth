@@ -205,3 +205,48 @@ func (s Storage) GetUserIDByEmail(ctx context.Context, email string) (int64, err
 	}
 	return userID, nil
 }
+
+func (s Storage) ChangeUsername(ctx context.Context, username, email, password string) error {
+	q := storage.ChangeUsernameQuery
+	res, err := s.db.ExecContext(ctx, q, username, email, password)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func (s Storage) ChangeEmail(ctx context.Context, username, email, password string) error {
+	q := storage.ChangeEmailQuery
+	res, err := s.db.ExecContext(ctx, q, username, email, password)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func (s Storage) ChangePassword(ctx context.Context, username, email, password string) error {
+	q := storage.ChangePasswordQuery
+	res, err := s.db.ExecContext(ctx, q, username, email, password)
+	if err != nil {
+		return fmt.Errorf("database error: %w", err)
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
