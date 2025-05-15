@@ -58,7 +58,7 @@ jobs:
         if: ${{ github.ref != 'refs/heads/master' }}
         run: |
           sed -i 's/AUTH_TAG=.*/AUTH_TAG=${{ github.sha }}/g' ./compose/staging/.env
-          sed -i 's/.*migrations_path:.*/  migrations_path: "github://hse-telescope/auth/migrations#${{ github.sha }}"/g' ./compose/staging/configs/auth.yaml
+          sed -i 's/.*migrations_path:.*/  migrations_path: github://hse-telescope/auth/migrations#${{ github.sha }}/g' ./compose/staging/configs/auth.yaml
 
           git add ./compose/staging/.env
           git add ./compose/staging/configs/auth.yaml
