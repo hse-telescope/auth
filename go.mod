@@ -4,9 +4,7 @@ go 1.23.0
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/hse-telescope/utils v0.0.0-20250412190134-e84f2910ce93
-	github.com/jmoiron/sqlx v1.4.0
-	github.com/olegdayo/omniconv v0.1.3
+	github.com/hse-telescope/utils v0.0.0-20250515194957-5acadf914eec
 	github.com/rs/cors v1.11.1
 	golang.org/x/crypto v0.36.0
 	gopkg.in/yaml.v3 v3.0.1

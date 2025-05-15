@@ -24,7 +24,10 @@ func New(dbURL string, migrationsPath string) (Storage, error) {
 	if err != nil {
 		return Storage{}, err
 	}
-	psql.MigrateDB(db, migrationsPath, psql.PGDriver)
+	err = psql.MigrateDB(db, migrationsPath, psql.PGDriver)
+	if err != nil {
+		return Storage{}, err
+	}
 	return Storage{
 		db: db,
 	}, nil
