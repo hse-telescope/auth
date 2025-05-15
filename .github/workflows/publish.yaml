@@ -58,10 +58,10 @@ jobs:
         if: ${{ github.ref != 'refs/heads/master' }}
         run: |
           sed -i 's/AUTH_TAG=.*/AUTH_TAG=${{ github.sha }}/g' ./compose/staging/.env
-          sed -i 's/.*migrations_path:.*/  migrations_path: "github://hse-telescope/auth/migrations#${{ github.sha }}"/g' ./compose/production/configs/auth.yaml
+          sed -i 's/.*migrations_path:.*/  migrations_path: "github://hse-telescope/auth/migrations#${{ github.sha }}"/g' ./compose/staging/configs/auth.yaml
 
           git add ./compose/staging/.env
-          git add ./compose/production/configs/auth.yaml
+          git add ./compose/staging/configs/auth.yaml
 
           # If script has been run twice on the same commit
           git commit --allow-empty -m "Tag update: ${{ github.sha }}"
