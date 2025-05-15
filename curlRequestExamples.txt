@@ -1,10 +1,39 @@
-// Get all users
-curl -v GET localhost:8080/users
-
 
 // Register user
-curl -v -X POST localhost:8080/register -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
+
+curl -X POST http://localhost:8081/register -H "Content-Type: application/json" -d "{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"testpass\"}"
+
+// Login user by username
+curl -v -X POST localhost:8081/login -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
+
+// Get users (token check)
+
+curl -X GET http://localhost:8081/users -H "Authorization: Bearer "<my_token>"
+
+// Refresh
+curl -v -X POST localhost:8081/refresh -H "Content-Type: application/json" -d "{\"token\":\"<token>"\"}"
+
+// docker container connection
+docker exec -it auth-db-1 psql -U user -d auth
+
+// Create project
+
+curl -v -X POST localhost:8081/createProject -H "Content-Type: application/json" -d "{\"user_id\":1, \"project_id\":1}"
 
 
-// Login user
-curl -v -X POST localhost:8080/login -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
+// Get users role in project
+
+curl -v "localhost:8081/userProjectRole?user_id=1&project_id=1"
+
+
+// Assign role
+
+curl -X POST http://localhost:8081/assignRole -H "Content-Type: application/json" -d "{\"user_id\":2,\"project_id\":1,\"role\":\"editor\"}"
+
+// Update role
+
+curl -X PUT http://localhost:8081/updateRole -H "Content-Type: application/json" -d "{\"user_id\":1,\"project_id\":100,\"role\":\"viewer\"}"
+
+// Delete role
+
+curl -X DELETE http://localhost:8081/deleteRole -H "Content-Type: application/json" -d "{\"user_id\":2,\"project_id\":1}"

@@ -11,9 +11,10 @@ type Clients struct{}
 
 // Config ...
 type Config struct {
-	Port    uint16  `yaml:"port"`
-	DB      psql.DB `yaml:"db"`
-	Clients Clients `yaml:"clients"`
+	Port      uint16  `yaml:"port"`
+	DB        psql.DB `yaml:"db"`
+	Clients   Clients `yaml:"clients"`
+	JWTSecret string  `yaml:"jwt_secret"`
 }
 
 // Parse ...

@@ -1,4 +1,4 @@
-port: 8080
+port: 8081
 
 db:
   schema: "postgres"
@@ -10,9 +10,38 @@ db:
   ssl: "disable"
   migrations_path: file://migrations
 
+jwt_secret: |
+  -----BEGIN RSA PRIVATE KEY-----
+  MIIEogIBAAKCAQEAwAstQ+76rXhKV3RsgmQP3UBXMWPQoZZGwN9XOrjY6jKGhDR/
+  i+uErflXpCrzbG6YRF/ffEF9k+GcDs+O4vTfJ1rm04rcCyymo2jEOgxOTU/iG4Rz
+  2tJ70ihncAe6Du9DQP4+lX5c9RGo/VTgTLH/wPb1F/6G2MzATg7K2dGdJJRyVG95
+  SFfLOZuzfbr+cRFyzJf5vvaNWZfBkM7HWbC6bAveFPnmjnPEJ1irkfQ9XGyV3jmb
+  QJJj4igDdVKKWWVoaO+t/8ZI1uVOnsltSx3ONGAil/P5RCLFndp0brNtWXBGAtJA
+  Xbn7LoQANl1sv/jQAfWYpcmxLsQ4Zy5ai7qkLwIDAQABAoIBAE+gEruZCb0FJCXQ
+  svD5Vg6Rj9V9olJtQZbUw5EodV/dZSLJtZypIVEVEj6SRG3QCThIXBxj9xJqt874
+  RjFaAHCL4ysQ5x2G/OzCEqJS2eB6X7CzIWo4XXiMoh60RXPNxp/bCs3nH9nI4b1w
+  BLQoFXfHrWWudfDMLGvw/DCGFdbFMe8s75NVqMB0NkgtuFZbcUGHQqNUX4IEZlGd
+  pLaKzvvelIW0sTzH3fqgtZrGkYj2Szsqudvoa82Xq2LsNEq4aJcfRPgQY9WoaRtr
+  gvM3w6ziipBOq9OaFz/EFY640TsagfKpkAUxGYWYxlcgM5BOJIw7ssinFEKrHwh8
+  v7IX3RECgYEA6OLQQS1q4CPTkhbTosPe7bbVH/qtZdh8388Xj+Jwi71GRIOiKPjF
+  jyQaO7SckYeoPy4U4jZ85pdvIR75huSXbxsH07TfbjTSrOIsRto0wRxMHVMXOE8Z
+  CZJi4Z8e1PNKszMPaEuZ7p5wNcnKjTFiYYQcfSvc63GtfZm71xRlL+cCgYEA0xqj
+  VEC/wK34h3xKJwpAdRQsbA/LwFlNOaMA0hyYh1Q6yRNjymvUtqR/qDxrMsFe19Z6
+  dtJiN7xTtgFfgxW4VwyBb1TdrcdZjmDC9omHyd5HEcNINbEQwTMSAFodS9DEnGG+
+  9MKqltu1DXTP5ZKCc2fnavflW9tpaYe+FogBAHkCgYBNK+PgxUEWNykDzwageBGm
+  aiCjsTjGd/+hVomzR1EOLVFcoNYah51HuqnqwQXk/7QUA5wt/epTqzjLG+2J8rPv
+  wGBOmjAz39M0MNqFPAehOlRKn18hbKyaTGTx6P2ZiWlminP/lpXSybPbTxwMv6Gf
+  ON0L6X4Skx/vcAMb2YlSXwKBgFejPGDyzGgqEP32DDau29l++X4XBKgiqpud3u5b
+  LrsnrYviP9A9+b2lBtYJ1xroCf6irI59gobO6RWq9kLOFowUxfs5CRpmovgnlWiR
+  6cxVOb3XCzg2/NSn5fY9cuIRlj2xmnu0AOvF5CDk+JW+v+c3IGxY41/B8736u2BR
+  L9FJAoGAFR2T0nErdAFCpGUojBxmCLcRSk5gs+kkl+nlJLtM8i5JS6fFEP5664Ku
+  VLH8+f6VVJVkfD1AtAjRW/I3LjSROmOpc986spzbLKjWtD4bwbN/PAq05cEWh/EN
+  PMfNjbJmt7VCq887HIOcOzqJhe03gzGcYp9jJ31R/2xei7UEF5c=
+  -----END RSA PRIVATE KEY-----
+
 clients:
   example:
-    url: http://localhost:8080
+    url: http://localhost:8081
 
 logger:
   mode: debug

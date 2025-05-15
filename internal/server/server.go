@@ -11,9 +11,22 @@ import (
 )
 
 type Provider interface {
-	GetUsers(ctx context.Context) ([]users.User, error)
-	AddUser(ctx context.Context, username, password string) (int64, error)
-	LoginUser(ctx context.Context, username, password string) (int64, error)
+	RegisterUser(ctx context.Context, username, email, password string) (users.TokenPair, error)
+	LoginUser(ctx context.Context, login, password string) (users.TokenPair, error)
+	//RefreshTokens(ctx context.Context, refreshToken string) (users.TokenPair, error)
+	GenerateTokens(ctx context.Context, userID int64) (users.TokenPair, error)
+	Logout(ctx context.Context, refreshToken string) error
+
+	GetUserProjects(ctx context.Context, userID int64) ([]int64, error)
+	CreateProject(ctx context.Context, userID, projectID int64) error
+	GetRole(ctx context.Context, userID, projectID int64) (string, error)
+	AssignRole(ctx context.Context, userID int64, username string, projectID int64, role string) error
+	UpdateRole(ctx context.Context, userID int64, username string, projectID int64, role string) error
+	DeleteRole(ctx context.Context, userID int64, username string, projectID int64) error
+
+	ChangeUsername(ctx context.Context, oldUsername, newUsername, email, password string) error
+	ChangeEmail(ctx context.Context, username, oldEmail, newEmail, password string) error
+	ChangePassword(ctx context.Context, username, email, oldPassword, newPassword string) error
 }
 
 type Server struct {
@@ -28,7 +41,7 @@ func New(conf config.Config, provider Provider) *Server {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
 
@@ -40,10 +53,34 @@ func New(conf config.Config, provider Provider) *Server {
 
 func (s *Server) setRouter() *http.ServeMux {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("OPTIONS /{path...}", func(w http.ResponseWriter, r *http.Request) {
+		setCommonHeaders(w)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	mux.HandleFunc("GET /ping", s.pingHandler)
-	mux.HandleFunc("GET /users", s.getUsersHandler)
+
 	mux.HandleFunc("POST /register", s.registerUserHandler)
 	mux.HandleFunc("POST /login", s.loginUserHandler)
+	//mux.HandleFunc("POST /refresh", s.refreshHandler)
+	mux.HandleFunc("POST /logout", s.logoutHandler)
+
+	mux.HandleFunc("GET /usersProjects", s.getUserProjectsHandler)
+
+	mux.HandleFunc("POST /createProject", s.createProjectHandler)
+
+	mux.HandleFunc("GET /userProjectRole", s.getUserProjectRoleHandler)
+	mux.HandleFunc("POST /assignRole", s.assignRoleHandler)
+	mux.HandleFunc("PUT /updateRole", s.updateRoleHandler)
+	mux.HandleFunc("DELETE /deleteRole", s.deleteRoleHandler)
+
+	//mux.HandleFunc("POST /forgotPassword", s.forgotPasswordHandler)
+
+	mux.HandleFunc("PUT /username", s.changeUsernameHandler)
+	mux.HandleFunc("PUT /email", s.changeEmailHandler)
+	mux.HandleFunc("PUT /password", s.changePasswordHandler)
+
 	return mux
 }
 
