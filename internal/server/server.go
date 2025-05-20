@@ -27,6 +27,7 @@ type Provider interface {
 	ChangeUsername(ctx context.Context, oldUsername, newUsername, email, password string) error
 	ChangeEmail(ctx context.Context, username, oldEmail, newEmail, password string) error
 	ChangePassword(ctx context.Context, username, email, oldPassword, newPassword string) error
+	ForgotPassword(ctx context.Context, email string) error
 }
 
 type Server struct {
@@ -75,7 +76,7 @@ func (s *Server) setRouter() *http.ServeMux {
 	mux.HandleFunc("PUT /updateRole", s.updateRoleHandler)
 	mux.HandleFunc("DELETE /deleteRole", s.deleteRoleHandler)
 
-	//mux.HandleFunc("POST /forgotPassword", s.forgotPasswordHandler)
+	mux.HandleFunc("POST /forgotPassword", s.forgotPasswordHandler)
 
 	mux.HandleFunc("PUT /username", s.changeUsernameHandler)
 	mux.HandleFunc("PUT /email", s.changeEmailHandler)

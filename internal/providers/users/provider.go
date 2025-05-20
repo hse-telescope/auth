@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/hse-telescope/auth/internal/auth"
@@ -34,6 +35,7 @@ type Repository interface {
 	ChangeUsername(ctx context.Context, username, email, password string) error
 	ChangeEmail(ctx context.Context, username, email, password string) error
 	ChangePassword(ctx context.Context, username, email, password string) error
+	GetUsernameByEmail(ctx context.Context, email string) (string, error)
 }
 
 type Provider struct {
@@ -61,6 +63,8 @@ var (
 	ErrAssignerIsNotOwner     = errors.New("assigner is not owner")
 	ErrOwnerRoleChanging      = errors.New("cannot change owner role")
 	ErrPasswordConflict       = errors.New("passwords by username and email are different")
+	ErrGeneratePassword       = errors.New("password generate error")
+	ErrHashingPassword        = errors.New("password hashing error")
 )
 
 //////////////////
@@ -494,18 +498,21 @@ func (p Provider) ChangePassword(ctx context.Context, username, email, currPassw
 		return err
 	}
 
+	log.Default().Printf("\n[HASHED BY USERNAME:] %s\n[HASHED BY EMAIL:   ] %s", hashedPasswordByUsername, hashedPasswordByEmail)
+
 	if hashedPasswordByEmail != hashedPasswordByUsername {
 		return ErrPasswordConflict
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPasswordByUsername), []byte(currPassword))
 	if err != nil {
+		log.Default().Printf("[OLD:] %s \n [NEW:] %s", hashedPasswordByUsername, currPassword)
 		return ErrIncorrectPassword
 	}
 
 	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
 	if err != nil {
-		return fmt.Errorf("failed to hash new password: %w", err)
+		return ErrHashingPassword
 	}
 
 	err = p.repository.ChangePassword(ctx, username, email, string(hashedNewPassword))
@@ -514,6 +521,40 @@ func (p Provider) ChangePassword(ctx context.Context, username, email, currPassw
 			return ErrUserNotFound
 		}
 		return err
+	}
+
+	return nil
+}
+
+func (p Provider) ForgotPassword(ctx context.Context, email string) error {
+	newPassword, err := auth.GenerateNewPassword()
+	if err != nil {
+		return ErrGeneratePassword
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), 10)
+	if err != nil {
+		return ErrHashingPassword
+	}
+
+	username, err := p.repository.GetUsernameByEmail(ctx, email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	// err := SendPassword... Kafka
+
+	err = p.repository.ChangePassword(ctx, username, email, string(hashedPassword))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrUserNotFound
+		}
+		return err
+	} else {
+		log.Default().Printf("New password: %s", newPassword)
 	}
 
 	return nil

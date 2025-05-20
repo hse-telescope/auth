@@ -253,3 +253,16 @@ func (s Storage) ChangePassword(ctx context.Context, username, email, password s
 
 	return nil
 }
+
+func (s Storage) GetUsernameByEmail(ctx context.Context, email string) (string, error) {
+	q := storage.GetUsernameByEmailQuery
+	var username string
+	err := s.db.QueryRowContext(ctx, q, email).Scan(&username)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", sql.ErrNoRows
+		}
+		return "", err
+	}
+	return username, nil
+}

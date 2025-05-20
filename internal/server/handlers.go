@@ -38,6 +38,7 @@ func (s *Server) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	log.Default().Println("\n---LOGIN---\n[REQUEST]: ", req)
 
 	tokens, err := s.provider.LoginUser(context.Background(), req.LoginData, req.Password)
 	if err != nil {
@@ -72,6 +73,7 @@ func (s *Server) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	log.Default().Println("\n---REGISTER---\n[REQUEST]: ", req)
 
 	if req.Username == "" || req.Email == "" || req.Password == "" {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
@@ -112,6 +114,7 @@ func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	log.Default().Println("\n---LOGOUT---\n[REQUEST]: ", req)
 
 	response := map[string]string{
 		"message": "Logout successful",
@@ -139,6 +142,8 @@ func (s *Server) getUserProjectsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	log.Default().Println("\n---GET PROJECTS---\n[REQUEST]: ", req)
+
 	projectIDs, err := s.provider.GetUserProjects(context.Background(), req.UserID)
 	if err != nil {
 		s.respondWithError(w, http.StatusNotFound, err.Error())
@@ -159,6 +164,7 @@ func (s *Server) createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	log.Default().Println("\n---CREATE PROJECT---\n[REQUEST]: ", req)
 
 	err := s.provider.CreateProject(r.Context(), req.UserID, req.ProjectID)
 	if err != nil {
@@ -229,6 +235,8 @@ func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	log.Default().Println("\n---GET ROLE---\n[REQUEST]: ", req)
+
 	currRole, err := s.provider.GetRole(r.Context(), req.UserID, req.ProjectID)
 	if err != nil {
 		switch {
@@ -259,6 +267,7 @@ func (s *Server) assignRoleHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	log.Default().Println("\n---ASSIGN ROLE---\n[REQUEST]: ", req)
 
 	err := s.provider.AssignRole(r.Context(), req.UserID, req.Username, req.ProjectID, req.Role)
 	if err != nil {
@@ -297,6 +306,7 @@ func (s *Server) updateRoleHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	log.Default().Println("\n---UPDATE ROLE---\n[REQUEST]: ", req)
 
 	err := s.provider.UpdateRole(r.Context(), req.UserID, req.Username, req.ProjectID, req.Role)
 	if err != nil {
@@ -337,6 +347,7 @@ func (s *Server) deleteRoleHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	log.Default().Println("\n---DELETE ROLE---\n[REQUEST]: ", req)
 
 	err := s.provider.DeleteRole(r.Context(), req.UserID, req.Username, req.ProjectID)
 	if err != nil {
@@ -382,6 +393,8 @@ func (s *Server) changeUsernameHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	log.Default().Println("\n---CHANGE USERNAME---\n[REQUEST]: ", req)
+	log.Default().Printf("%s\n%s\n%s\n%s\n", req.Email, req.NewUsername, req.OldUsername, req.Password)
 
 	err := s.provider.ChangeUsername(r.Context(), req.OldUsername, req.NewUsername, req.Email, req.Password)
 	if err != nil {
@@ -409,6 +422,7 @@ func (s *Server) changeEmailHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	log.Default().Println("\n---CHANGE EMAIL---\n[REQUEST]: ", req)
 
 	err := s.provider.ChangeEmail(r.Context(), req.Username, req.OldEmail, req.NewEmail, req.Password)
 	if err != nil {
@@ -436,6 +450,7 @@ func (s *Server) changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondWithError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
+	log.Default().Println("\n---CHANGE PASSWORD---\n[REQUEST]: ", req)
 
 	err := s.provider.ChangePassword(r.Context(), req.Username, req.Email, req.OldPassword, req.NewPassword)
 	if err != nil {
@@ -452,6 +467,30 @@ func (s *Server) changePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.respondWithJSON(w, http.StatusOK, map[string]string{"status": "password changed"})
+}
+
+func (s *Server) forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	var req ForgotPasswordRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.respondWithError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	log.Default().Println("\n---FORGOT PASSWORD---\n[REQUEST]: ", req)
+
+	err := s.provider.ForgotPassword(r.Context(), req.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, users.ErrUserNotFound):
+			s.respondWithError(w, http.StatusNotFound, "user not found")
+		default:
+			log.Printf("Reset password error: %v", err)
+			s.respondWithError(w, http.StatusInternalServerError, "failed to reset password")
+		}
+		return
+	}
+
+	s.respondWithJSON(w, http.StatusOK, map[string]string{"status": "password has been sent"})
 }
 
 // Responces:

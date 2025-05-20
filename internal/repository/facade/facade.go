@@ -27,6 +27,8 @@ type Storage interface {
 	ChangeUsername(ctx context.Context, username, email, password string) error
 	ChangeEmail(ctx context.Context, username, email, password string) error
 	ChangePassword(ctx context.Context, username, email, password string) error
+
+	GetUsernameByEmail(ctx context.Context, email string) (string, error)
 }
 
 type Facade struct {
@@ -103,3 +105,6 @@ func (f Facade) ChangePassword(ctx context.Context, username, email, password st
 	return f.storage.ChangePassword(ctx, username, email, password)
 }
 
+func (f Facade) GetUsernameByEmail(ctx context.Context, email string) (string, error) {
+	return f.storage.GetUsernameByEmail(ctx, email)
+}
