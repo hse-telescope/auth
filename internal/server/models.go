@@ -53,7 +53,7 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	LoginData string `json:"loginData"`
+	LoginData string `json:"login_data"`
 	Password  string `json:"password"`
 }
 

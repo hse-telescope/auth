@@ -235,6 +235,12 @@ func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	req.Role = r.URL.Query().Get("role")
+	if req.Role == "" {
+		s.respondWithError(w, http.StatusBadRequest, "invalid request: role is required")
+		return
+	}
+
 	log.Default().Println("\n---GET ROLE---\n[REQUEST]: ", req)
 
 	currRole, err := s.provider.GetRole(r.Context(), req.UserID, req.ProjectID)

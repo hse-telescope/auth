@@ -1,39 +1,53 @@
-
-// Register user
-
-curl -X POST http://localhost:8081/register -H "Content-Type: application/json" -d "{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"testpass\"}"
-
-// Login user by username
-curl -v -X POST localhost:8081/login -H "Content-Type: application/json" -d "{\"username\":\"VladLim\",\"password\":\"VladLim\"}"
-
-// Get users (token check)
-
-curl -X GET http://localhost:8081/users -H "Authorization: Bearer "<my_token>"
-
-// Refresh
-curl -v -X POST localhost:8081/refresh -H "Content-Type: application/json" -d "{\"token\":\"<token>"\"}"
-
-// docker container connection
+// DB connect with docker container
 docker exec -it auth-db-1 psql -U user -d auth
 
-// Create project
+// Ping
+curl -v http://localhost:8080/auth/ping
 
-curl -v -X POST localhost:8081/createProject -H "Content-Type: application/json" -d "{\"user_id\":1, \"project_id\":1}"
+
+// Register user
+curl -v -X POST http://localhost:8080/auth/register -H "Content-Type: application/json" -d "{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"testpass\"}"
+
+
+// Login user by username
+curl -v -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d "{\"login_data\":\"testuser\", \"password\":\"testpass\"}"
+
+
+// Login user by email
+curl -v -X POST http://localhost:8080/auth/login -H "Content-Type: application/json" -d "{\"login_data\":\"testuser\", \"password\":\"testpass\"}"
+
+
+// Create project
+curl -v -X POST localhost:8080/auth/createProject -H "Content-Type: application/json" -d "{\"user_id\":1, \"project_id\":1}"
 
 
 // Get users role in project
-
-curl -v "localhost:8081/userProjectRole?user_id=1&project_id=1"
+curl -v "localhost:8080/auth/userProjectRole?user_id=1&project_id=1&role=owner"
 
 
 // Assign role
+curl -v -X POST http://localhost:8080/auth/assignRole -H "Content-Type: application/json" -d "{\"user_id\":1,\"username\":\"user\",\"project_id\":1,\"role\":\"editor\"}"
 
-curl -X POST http://localhost:8081/assignRole -H "Content-Type: application/json" -d "{\"user_id\":2,\"project_id\":1,\"role\":\"editor\"}"
 
 // Update role
+curl -v -X PUT http://localhost:8080/auth/updateRole -H "Content-Type: application/json" -d "{\"user_id\":1,\"username\":\"user\",\"project_id\":1,\"role\":\"viewer\"}"
 
-curl -X PUT http://localhost:8081/updateRole -H "Content-Type: application/json" -d "{\"user_id\":1,\"project_id\":100,\"role\":\"viewer\"}"
 
 // Delete role
+curl -v -X DELETE http://localhost:8080/auth/deleteRole -H "Content-Type: application/json" -d "{\"user_id\":1,\"username\":\"user\",\"project_id\":1}"
 
-curl -X DELETE http://localhost:8081/deleteRole -H "Content-Type: application/json" -d "{\"user_id\":2,\"project_id\":1}"
+
+// Forgot password
+curl -v -X POST http://localhost:8080/auth/forgotPassword -H "Content-Type: application/json" -d "{\"email\":\"test@example.com\"}"
+
+
+// Change username
+curl -v -X PUT http://localhost:8080/auth/username -H "Content-Type: application/json" -d "{\"old_username\":\"user\", \"new_username\":\"test_user\", \"email\":\"user@mail.ru\", \"password\":\"password\"}"
+	
+    
+// Change email
+curl -v -X PUT http://localhost:8080/auth/email -H "Content-Type: application/json" -d "{\"username\":\"user\", \"old_email\":\"user@example.com\", \"new_email\":\"user@mail.ru\", \"password\":\"password\"}"
+
+
+// Change password
+curl -v -X PUT http://localhost:8080/auth/password -H "Content-Type: application/json" -d "{\"username\":\"user\", \"email\":\"user@mail.ru\", \"old_password\":\"password\", \"new_password\":\"newpass\"}"
