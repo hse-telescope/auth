@@ -18,3 +18,8 @@ type TokenPair struct {
 	RefreshToken string
 	UserID       int64
 }
+
+type ProjectUser struct {
+	Username string
+	Role     string
+}

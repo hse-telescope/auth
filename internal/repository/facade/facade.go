@@ -27,6 +27,8 @@ type Storage interface {
 	ChangeUsername(ctx context.Context, username, email, password string) error
 	ChangeEmail(ctx context.Context, username, email, password string) error
 	ChangePassword(ctx context.Context, username, email, password string) error
+
+	GetProjectUsersRoles(ctx context.Context, projectID int64) ([]models.ProjectUser, error)
 }
 
 type Facade struct {
@@ -103,3 +105,6 @@ func (f Facade) ChangePassword(ctx context.Context, username, email, password st
 	return f.storage.ChangePassword(ctx, username, email, password)
 }
 
+func (f Facade) GetProjectUsers(ctx context.Context, projectID int64) ([]models.ProjectUser, error) {
+	return f.storage.GetProjectUsersRoles(ctx, projectID)
+}

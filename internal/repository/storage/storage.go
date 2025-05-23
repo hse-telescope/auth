@@ -146,6 +146,53 @@ func (s Storage) GetUserProjects(ctx context.Context, userID int64) ([]int64, er
 	return projectIDs, nil
 }
 
+func (s Storage) GetProjectUsersRoles(ctx context.Context, projectID int64) ([]models.ProjectUser, error) {
+	query := `
+		SELECT user_id, role 
+		FROM project_permissions 
+		WHERE project_id = $1
+	`
+	rows, err := s.db.QueryContext(ctx, query, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.ProjectUser
+
+	for rows.Next() {
+		var userID int64
+		var role string
+
+		if err := rows.Scan(&userID, &role); err != nil {
+			return nil, err
+		}
+
+		// Получаем login по user_id
+		var username string
+		err := s.db.QueryRowContext(ctx, `
+			SELECT username 
+			FROM users 
+			WHERE id = $1
+		`, userID).Scan(&username)
+
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, models.ProjectUser{
+			Username: username,
+			Role:     role,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (s Storage) GetUserProjectRole(ctx context.Context, userID, projectID int64) (string, error) {
 	q := storage.GetPermissionQuery
 	var role string

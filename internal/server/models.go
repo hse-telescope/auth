@@ -81,3 +81,8 @@ type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
 }
+
+type ProjectUser struct {
+	Username string `json:"login"`
+	Role     string `json:"role"`
+}
