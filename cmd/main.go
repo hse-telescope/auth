@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/hse-telescope/auth/internal/auth"
@@ -15,10 +16,12 @@ func main() {
 	configPath := os.Args[1]
 	conf, err := config.Parse(configPath)
 	if err != nil {
+		log.Default().Printf("\n---CONFIG PARSE ERROR---\n[ERROR]: %s\n", err.Error())
 		panic(err)
 	}
 
 	if err := auth.InitJWT(conf.JWTSecret); err != nil {
+		log.Default().Printf("\n---JWT INIT ERROR---\n[ERROR]: %s\n", err.Error())
 		panic(err)
 	}
 
