@@ -27,14 +27,16 @@ func Parse(path string) (Config, error) {
 		return Config{}, err
 	}
 
+	log.Default().Println("\n---START PARSING---")
 	config := Config{}
 	err = yaml.Unmarshal(bytes, &config)
 	if err != nil {
 		log.Default().Printf("\n---CONFIG ERR---\n[ERR]: %s\n", err.Error())
 		return Config{}, err
 	}
+	log.Default().Println("\n---FINISH PARSING---")
 
-	log.Default().Println("\n---PARSED CONFIG---\n[CONFIG]:", config)
+	log.Default().Println("\n---PARSED CONFIG---\n[CONFIG]:\n", config)
 
 	return config, nil
 }
