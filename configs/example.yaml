@@ -10,6 +10,11 @@ db:
   ssl: "disable"
   migrations_path: file://migrations
 
+queue_credentials:
+    urls:
+      - kafka:9092
+    topic: send-email-events
+
 jwt_secret: |
   -----BEGIN RSA PRIVATE KEY-----
   MIIEogIBAAKCAQEAwAstQ+76rXhKV3RsgmQP3UBXMWPQoZZGwN9XOrjY6jKGhDR/

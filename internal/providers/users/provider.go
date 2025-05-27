@@ -11,6 +11,7 @@ import (
 	"github.com/hse-telescope/auth/internal/auth"
 	"github.com/hse-telescope/auth/internal/repository/models"
 	"github.com/hse-telescope/auth/internal/repository/storage"
+	"github.com/hse-telescope/emailer/pkg/wrapper"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -66,6 +67,7 @@ var (
 	ErrPasswordConflict       = errors.New("passwords by username and email are different")
 	ErrGeneratePassword       = errors.New("password generate error")
 	ErrHashingPassword        = errors.New("password hashing error")
+	ErrSendEmail              = errors.New("sending email error")
 )
 
 //////////////////
@@ -536,7 +538,7 @@ func (p Provider) ChangePassword(ctx context.Context, username, email, currPassw
 	return nil
 }
 
-func (p Provider) ForgotPassword(ctx context.Context, email string) error {
+func (p Provider) ForgotPassword(ctx context.Context, email string, emailer *wrapper.Emailer) error {
 	newPassword, err := auth.GenerateNewPassword()
 	if err != nil {
 		return ErrGeneratePassword
@@ -556,6 +558,15 @@ func (p Provider) ForgotPassword(ctx context.Context, email string) error {
 	}
 
 	// err := SendPassword... Kafka
+
+	err = emailer.SendEmail(ctx, wrapper.Message{
+		EMail:   email,
+		Title:   "Dear user, here is your new password",
+		Message: newPassword,
+	})
+	if err != nil {
+		return ErrSendEmail
+	}
 
 	err = p.repository.ChangePassword(ctx, username, email, string(hashedPassword))
 	if err != nil {

@@ -9,12 +9,19 @@ import (
 
 type Clients struct{}
 
+// Kafka config...
+type KafkaConfig struct {
+	URLs  []string `yaml:"urls"`
+	Topic string   `yaml:"topic"`
+}
+
 // Config ...
 type Config struct {
-	Port      uint16  `yaml:"port"`
-	DB        psql.DB `yaml:"db"`
-	Clients   Clients `yaml:"clients"`
-	JWTSecret string  `yaml:"jwt_secret"`
+	Port      uint16      `yaml:"port"`
+	DB        psql.DB     `yaml:"db"`
+	Clients   Clients     `yaml:"clients"`
+	JWTSecret string      `yaml:"jwt_secret"`
+	Kafka     KafkaConfig `yaml:"queue_credentials"`
 }
 
 // Parse ...

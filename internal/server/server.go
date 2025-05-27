@@ -8,6 +8,8 @@ import (
 	"github.com/hse-telescope/auth/internal/config"
 	"github.com/hse-telescope/auth/internal/providers/users"
 	"github.com/hse-telescope/auth/internal/repository/models"
+	"github.com/hse-telescope/emailer/pkg/wrapper"
+	"github.com/hse-telescope/utils/queues/kafka"
 	"github.com/rs/cors"
 )
 
@@ -30,12 +32,13 @@ type Provider interface {
 	ChangeUsername(ctx context.Context, oldUsername, newUsername, email, password string) error
 	ChangeEmail(ctx context.Context, username, oldEmail, newEmail, password string) error
 	ChangePassword(ctx context.Context, username, email, oldPassword, newPassword string) error
-	ForgotPassword(ctx context.Context, email string) error
+	ForgotPassword(ctx context.Context, email string, emailer *wrapper.Emailer) error
 }
 
 type Server struct {
 	server   http.Server
 	provider Provider
+	emailer  *wrapper.Emailer
 }
 
 func New(conf config.Config, provider Provider) *Server {
@@ -51,6 +54,16 @@ func New(conf config.Config, provider Provider) *Server {
 
 	s.server.Handler = c.Handler(s.setRouter())
 	s.provider = provider
+
+	emailer, err := wrapper.New(kafka.QueueCredentials{
+		URLs:  conf.Kafka.URLs,
+		Topic: conf.Kafka.Topic,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	s.emailer = &emailer
 
 	return s
 }
