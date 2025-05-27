@@ -554,7 +554,7 @@ func (s *Server) forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Default().Println("\n---FORGOT PASSWORD---\n[REQUEST]: ", req)
 
-	err := s.provider.ForgotPassword(r.Context(), req.Email)
+	err := s.provider.ForgotPassword(r.Context(), req.Email, s.emailer)
 	if err != nil {
 		switch {
 		case errors.Is(err, users.ErrUserNotFound):
