@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -218,6 +219,38 @@ func hasPermission(currRoleStr, reqRoleStr string) bool {
 	return currRole >= reqRole
 }
 
+func (s *Server) getProjectUsersHandler(w http.ResponseWriter, r *http.Request) {
+	claims, ok := FromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userID := int64(claims["user_id"].(float64))
+	projectID, err := strconv.ParseInt(r.URL.Query().Get("project_id"), 10, 64)
+	if err != nil {
+		s.respondWithError(w, http.StatusBadRequest, "invalid project_id")
+		return
+	}
+
+	role, err := s.provider.GetRole(context.Background(), userID, projectID)
+	if err != nil || !hasPermission(role, "viewer") {
+		s.respondWithError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
+	// Новый метод, возвращающий []ProjectUser
+	projectUsers, err := s.provider.GetProjectUserRoles(context.Background(), projectID)
+	if err != nil {
+		s.respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	s.respondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"users": projectUsers,
+	})
+}
+
 func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Request) {
 	var req GetRoleRequest
 	var err error
@@ -243,6 +276,20 @@ func (s *Server) getUserProjectRoleHandler(w http.ResponseWriter, r *http.Reques
 
 	log.Default().Println("\n---GET ROLE---\n[REQUEST]: ", req)
 
+	if req.Role == "" {
+		s.respondWithError(w, http.StatusBadRequest, "invalid request: role is required")
+		return
+	}
+
+	log.Default().Println("\n---GET ROLE---\n[REQUEST]: ", req)
+
+	req.Role = r.URL.Query().Get("role")
+	if req.Role == "" {
+		s.respondWithError(w, http.StatusBadRequest, "invalid request: role is required")
+		return
+	}
+
+	log.Default().Println("\n---GET ROLE---\n[REQUEST]: ", req)
 	currRole, err := s.provider.GetRole(r.Context(), req.UserID, req.ProjectID)
 	if err != nil {
 		switch {
@@ -274,6 +321,13 @@ func (s *Server) assignRoleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Default().Println("\n---ASSIGN ROLE---\n[REQUEST]: ", req)
+
+	claims, ok := FromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	req.UserID = int64(claims["user_id"].(float64))
 
 	err := s.provider.AssignRole(r.Context(), req.UserID, req.Username, req.ProjectID, req.Role)
 	if err != nil {
@@ -313,6 +367,15 @@ func (s *Server) updateRoleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Default().Println("\n---UPDATE ROLE---\n[REQUEST]: ", req)
+
+	claims, ok := FromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	req.UserID = int64(claims["user_id"].(float64))
+
+	fmt.Println(req.UserID, req.Username, req.ProjectID, req.Role)
 
 	err := s.provider.UpdateRole(r.Context(), req.UserID, req.Username, req.ProjectID, req.Role)
 	if err != nil {
@@ -354,6 +417,13 @@ func (s *Server) deleteRoleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Default().Println("\n---DELETE ROLE---\n[REQUEST]: ", req)
+
+	claims, ok := FromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	req.UserID = int64(claims["user_id"].(float64))
 
 	err := s.provider.DeleteRole(r.Context(), req.UserID, req.Username, req.ProjectID)
 	if err != nil {

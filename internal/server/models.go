@@ -85,3 +85,8 @@ type ChangePasswordRequest struct {
 type ForgotPasswordRequest struct {
 	Email string `json:"email"`
 }
+
+type ProjectUser struct {
+	Username string `json:"login"`
+	Role     string `json:"role"`
+}

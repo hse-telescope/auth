@@ -28,6 +28,8 @@ type Storage interface {
 	ChangeEmail(ctx context.Context, username, email, password string) error
 	ChangePassword(ctx context.Context, username, email, password string) error
 
+	GetProjectUsersRoles(ctx context.Context, projectID int64) ([]models.ProjectUser, error)
+
 	GetUsernameByEmail(ctx context.Context, email string) (string, error)
 }
 
@@ -103,6 +105,10 @@ func (f Facade) ChangeEmail(ctx context.Context, username, email, password strin
 
 func (f Facade) ChangePassword(ctx context.Context, username, email, password string) error {
 	return f.storage.ChangePassword(ctx, username, email, password)
+}
+
+func (f Facade) GetProjectUsers(ctx context.Context, projectID int64) ([]models.ProjectUser, error) {
+	return f.storage.GetProjectUsersRoles(ctx, projectID)
 }
 
 func (f Facade) GetUsernameByEmail(ctx context.Context, email string) (string, error) {

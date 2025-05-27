@@ -7,6 +7,7 @@ import (
 
 	"github.com/hse-telescope/auth/internal/config"
 	"github.com/hse-telescope/auth/internal/providers/users"
+	"github.com/hse-telescope/auth/internal/repository/models"
 	"github.com/rs/cors"
 )
 
@@ -18,6 +19,8 @@ type Provider interface {
 	Logout(ctx context.Context, refreshToken string) error
 
 	GetUserProjects(ctx context.Context, userID int64) ([]int64, error)
+	GetProjectUserRoles(ctx context.Context, projectID int64) ([]models.ProjectUser, error)
+
 	CreateProject(ctx context.Context, userID, projectID int64) error
 	GetRole(ctx context.Context, userID, projectID int64) (string, error)
 	AssignRole(ctx context.Context, userID int64, username string, projectID int64, role string) error
@@ -41,7 +44,7 @@ func New(conf config.Config, provider Provider) *Server {
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
@@ -68,13 +71,14 @@ func (s *Server) setRouter() *http.ServeMux {
 	mux.HandleFunc("POST /logout", s.logoutHandler)
 
 	mux.HandleFunc("GET /usersProjects", s.getUserProjectsHandler)
+	mux.Handle("GET /projectUsers", s.AuthMiddleware(http.HandlerFunc(s.getProjectUsersHandler)))
 
 	mux.HandleFunc("POST /createProject", s.createProjectHandler)
 
 	mux.HandleFunc("GET /userProjectRole", s.getUserProjectRoleHandler)
-	mux.HandleFunc("POST /assignRole", s.assignRoleHandler)
-	mux.HandleFunc("PUT /updateRole", s.updateRoleHandler)
-	mux.HandleFunc("DELETE /deleteRole", s.deleteRoleHandler)
+	mux.Handle("POST /assignRole", s.AuthMiddleware(http.HandlerFunc(s.assignRoleHandler)))
+	mux.Handle("PUT /updateRole", s.AuthMiddleware(http.HandlerFunc(s.updateRoleHandler)))
+	mux.Handle("DELETE /deleteRole", s.AuthMiddleware(http.HandlerFunc(s.deleteRoleHandler)))
 
 	mux.HandleFunc("POST /forgotPassword", s.forgotPasswordHandler)
 

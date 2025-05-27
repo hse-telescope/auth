@@ -20,6 +20,7 @@ type Repository interface {
 	CheckUserByEmail(ctx context.Context, email string) (int64, string, error)
 
 	GetUserProjects(ctx context.Context, userID int64) ([]int64, error)
+	GetProjectUsers(ctx context.Context, projectID int64) ([]models.ProjectUser, error)
 	CreateProjectPermission(ctx context.Context, perm models.ProjectPermission) error
 
 	AssignRole(ctx context.Context, perm models.ProjectPermission) error
@@ -420,6 +421,15 @@ func (p Provider) DeleteRole(ctx context.Context, userID int64, username string,
 
 func isValidRole(role string) bool {
 	return (role != RoleOwner) && (role == RoleEditor || role == RoleViewer)
+}
+
+func (p Provider) GetProjectUserRoles(ctx context.Context, projectID int64) ([]models.ProjectUser, error) {
+	users, err := p.repository.GetProjectUsers(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get projects: %w", err)
+	}
+
+	return users, nil
 }
 
 ///////////////////////
