@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/hse-telescope/auth/internal/config"
@@ -32,13 +33,13 @@ type Provider interface {
 	ChangeUsername(ctx context.Context, oldUsername, newUsername, email, password string) error
 	ChangeEmail(ctx context.Context, username, oldEmail, newEmail, password string) error
 	ChangePassword(ctx context.Context, username, email, oldPassword, newPassword string) error
-	ForgotPassword(ctx context.Context, email string, emailer *wrapper.Emailer) error
+	ForgotPassword(ctx context.Context, email string, emailer wrapper.Emailer) error
 }
 
 type Server struct {
 	server   http.Server
 	provider Provider
-	emailer  *wrapper.Emailer
+	emailer  wrapper.Emailer
 }
 
 func New(conf config.Config, provider Provider) *Server {
@@ -59,11 +60,12 @@ func New(conf config.Config, provider Provider) *Server {
 		URLs:  conf.Kafka.URLs,
 		Topic: conf.Kafka.Topic,
 	})
+	log.Default().Printf("---KAFKA---\n[urls]: %s\n[topic]: %s", conf.Kafka.URLs, conf.Kafka.Topic)
 	if err != nil {
 		panic(err)
 	}
 
-	s.emailer = &emailer
+	s.emailer = emailer
 
 	return s
 }

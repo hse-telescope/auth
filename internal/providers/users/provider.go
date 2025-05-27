@@ -538,7 +538,7 @@ func (p Provider) ChangePassword(ctx context.Context, username, email, currPassw
 	return nil
 }
 
-func (p Provider) ForgotPassword(ctx context.Context, email string, emailer *wrapper.Emailer) error {
+func (p Provider) ForgotPassword(ctx context.Context, email string, emailer wrapper.Emailer) error {
 	newPassword, err := auth.GenerateNewPassword()
 	if err != nil {
 		return ErrGeneratePassword
