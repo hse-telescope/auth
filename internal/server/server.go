@@ -60,7 +60,7 @@ func New(conf config.Config, provider Provider) *Server {
 		URLs:  conf.Kafka.URLs,
 		Topic: conf.Kafka.Topic,
 	})
-	log.Default().Printf("\n---KAFKA---\n[urls]: %s\n[topic]: %s\n[err]: %s", conf.Kafka.URLs, conf.Kafka.Topic, err.Error())
+	log.Default().Printf("\n---KAFKA---\n[urls]: %s\n[topic]: %s\n", conf.Kafka.URLs, conf.Kafka.Topic)
 	if err != nil {
 		panic(err)
 	}
