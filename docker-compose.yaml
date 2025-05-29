@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    command: ["./configs/example.yaml"]
+    command: ["./configs/auth.yaml"]
     volumes:
       - "./configs:/app/configs"
     ports:

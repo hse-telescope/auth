@@ -78,9 +78,9 @@ func (s *Server) setRouter() *http.ServeMux {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	mux.HandleFunc("GET /ping", s.pingHandler)
+	mux.HandleFunc("GET /api/auth/ping", s.pingHandler)
 
-	mux.HandleFunc("POST /register", s.registerUserHandler)
+	mux.HandleFunc("POST /api/auth/register", s.registerUserHandler)
 	mux.HandleFunc("POST /login", s.loginUserHandler)
 	//mux.HandleFunc("POST /refresh", s.refreshHandler)
 	mux.HandleFunc("POST /logout", s.logoutHandler)
