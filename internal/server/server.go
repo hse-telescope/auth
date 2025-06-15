@@ -7,6 +7,7 @@ import (
 
 	"github.com/hse-telescope/auth/internal/config"
 	"github.com/hse-telescope/auth/internal/providers/users"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
 )
 
@@ -44,6 +45,7 @@ func (s *Server) setRouter() *http.ServeMux {
 	mux.HandleFunc("GET /users", s.getUsersHandler)
 	mux.HandleFunc("POST /register", s.registerUserHandler)
 	mux.HandleFunc("POST /login", s.loginUserHandler)
+	mux.Handle("/metrics", promhttp.Handler())
 	return mux
 }
 
